@@ -212,7 +212,7 @@ class DIMOQ:
             if episode % log_every == 0:
                 pf = self.get_local_dcs(state=0)
                 evs = [dist.expected_value() for dist in pf]
-                print(evs)
+                print(f'Expected values: {evs}')
                 value = dist_hypervolume(self.ref_point, pf)
                 print(f'Hypervolume after episode {episode}: {value}')
                 if self.log:
