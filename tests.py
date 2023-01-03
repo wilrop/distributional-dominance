@@ -91,9 +91,17 @@ def test_sd():
     print(f'Dominance result for a and d: {strict_dom_ad}')
 
 
+def test_distance():
+    print(f'Distance between a and b: {dista.js_distance(distb)}')
+    print(f'Distance between a and c: {dista.js_distance(distc)}')
+    print(f'Distance between a and d: {dista.js_distance(distd)}')
+    print(f'Distance between a and e: {dista.js_distance(diste)}')
+
+
 if __name__ == '__main__':
     test_dd_prune()
     test_cdd_prune_joint()
     test_cdd_prune_marginals()
     test_mvcd()
     test_sd()
+    test_distance()

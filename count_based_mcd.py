@@ -9,8 +9,13 @@ class CountBasedMCD(MultivariateCategoricalDistribution):
         self.counts = np.zeros(self.num_atoms)
 
     def update(self, vec):
+        """Update the distribution with a new vector.
+
+        Args:
+            vec (ndarray): The vector to update the distribution with.
+        """
         projected_vecs = self.project_vec(vec)
         for projected_vec, prob in projected_vecs:
-            self.counts[self.__vec_to_idx(projected_vec)] += prob
+            self.counts[self._vec_to_idx(projected_vec)] += prob
         self.dist = self.counts / np.sum(self.counts)
         self.cdf = self.get_cdf()

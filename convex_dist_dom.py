@@ -103,6 +103,16 @@ def cdd_marginal_lp(dist_check, mixture_lst):
 
 
 def convex_dist_dom(dist, mixture_lst, lp='joint'):
+    """Whether a distribution is convex distributionally dominated by a mixture of distributions.
+
+    Args:
+        dist (MultivariateCategoricalDistribution): A multivariate distribution to check.
+        mixture_lst (List[MultivariateCategoricalDistribution]): A list of distributions to use in the mixture.
+        lp (str): The type of linear program to use. Either 'joint' or 'marginal'.
+
+    Returns:
+        bool: Whether the distribution is convex distributionally dominated.
+    """
     if lp == 'joint':
         success, delta = cdd_joint_lp(dist, mixture_lst)
     else:

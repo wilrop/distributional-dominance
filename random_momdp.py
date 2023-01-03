@@ -5,6 +5,7 @@ from gym import spaces
 
 
 class RandomMOMDP(gym.Env):
+    """A class to generate random MOMDPs."""
 
     def __init__(self, num_states, num_objectives, num_actions, num_next_states, num_terminal_states, reward_min,
                  reward_max, start_state=0, seed=None):
@@ -31,6 +32,11 @@ class RandomMOMDP(gym.Env):
         self._timestep = 0
 
     def __init_transition_function(self):
+        """Initialize the transition function.
+
+        Returns:
+            ndarray: A transition function.
+        """
         transition_function = np.zeros((self.num_states, self.num_actions, self.num_states))
         for state in range(self.num_states):
             if state in self._terminal_states:
@@ -43,6 +49,7 @@ class RandomMOMDP(gym.Env):
         return transition_function
 
     def get_config(self):
+        """Get the configuration of the environment."""
         return {
             "num_states": self.num_states,
             "num_objectives": self.num_objectives,
@@ -54,7 +61,14 @@ class RandomMOMDP(gym.Env):
         }
 
     def reset(self, seed=None, start_state=None):
-        """ Reset the environment and return the initial state number
+        """Reset the environment.
+
+        Args:
+            seed (int, optional): The seed to use. (Default value = None)
+            start_state (int, optional): The state to start in. (Default value = None)
+
+        Returns:
+            int, None: The initial state and no info.
         """
         # Pick an initial state at random
         self._state = start_state if start_state is not None else self.start_state
@@ -63,6 +77,15 @@ class RandomMOMDP(gym.Env):
         return self._state, None
 
     def step(self, action):
+        """Take a step in the environment.
+
+        Args:
+            action (int): The action to take.
+
+        Returns:
+            int, ndarray, bool, bool, dict: The next state, the reward, whether the episode is done, whether the episode
+                is truncated and no info.
+        """
         # Change state using the transition function
         next_state = self.rng.choice(self.num_states, p=self._transition_function[self._state, action])
         rewards = self._reward_function[self._state, action, next_state]

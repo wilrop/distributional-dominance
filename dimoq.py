@@ -8,9 +8,9 @@ from dist_metrics import dist_hypervolume
 from multivariate_categorical_distribution import MultivariateCategoricalDistribution
 
 
-class DDQL:
+class DIMOQ:
     """
-    Distributional Dominance Q-learning
+    Distributional Dominance Multi-Objective Q-learning
     """
 
     def __init__(
@@ -66,11 +66,20 @@ class DDQL:
             self.setup_wandb()
 
     def __zero_init(self, dist_class):
+        """Initialize a distribution with zero values.
+
+        Args:
+            dist_class (class): The distribution class.
+
+        Returns:
+            Dist: A distribution.
+        """
         dist = dist_class(self.num_atoms, self.v_mins, self.v_maxs)
         dist.static_update([np.zeros(self.num_objectives)], [1])
         return dist
 
     def setup_wandb(self):
+        """Set up the wandb logging."""
         self.experiment_name = self.experiment_name
 
         wandb.init(
@@ -84,6 +93,7 @@ class DDQL:
         self.writer = SummaryWriter(f"/tmp/{self.experiment_name}")
 
     def close_wandb(self):
+        """Close the wandb logging."""
         self.writer.close()
         wandb.finish()
 
@@ -106,7 +116,7 @@ class DDQL:
         }
 
     def score_hypervolume(self, state):
-        """Compute the action scores based upon the hypervolume metric.
+        """Compute the action scores based upon the hypervolume metric for the expected values.
 
         Args:
             state (int): The current state.
@@ -119,14 +129,14 @@ class DDQL:
         return action_scores
 
     def get_q_dists(self, state, action):
-        """Compute the Q-set for a given state-action pair.
+        """Compute the distributional Q-set for a given state-action pair.
 
         Args:
             state (int): The current state.
             action (int): The action.
 
         Returns:
-            A set of Q distributions.
+            List[Dist]: A list of Q distributions.
         """
         nd_dists = self.non_dominated[state][action]
         reward_dist = self.reward_dists[state][action]
@@ -150,7 +160,7 @@ class DDQL:
             return self.rng.choice(np.argwhere(action_scores == np.max(action_scores)).flatten())
 
     def calc_non_dominated(self, state):
-        """Get the non-dominated vectors in a given state.
+        """Get the distributionally non-dominated distributions in a given state.
 
         Args:
             state (int): The current state.
@@ -158,14 +168,13 @@ class DDQL:
         Returns:
             Set: A set of Pareto non-dominated vectors.
         """
-        # Get the Q-set for each action and merge them together in one list
         q_dists = [self.get_q_dists(state, action) for action in range(self.num_actions)]
         q_dists = [q_dist for q_dist_list in q_dists for q_dist in q_dist_list]
         non_dominated = dd_prune(q_dists)
         return non_dominated
 
     def train(self, num_episodes=3000, log_every=100, action_eval='hypervolume'):
-        """Learn the Pareto front.
+        """Learn the distributional dominance set.
 
         Args:
             num_episodes (int, optional): The number of episodes to train for.
@@ -173,7 +182,7 @@ class DDQL:
             action_eval (str, optional): The action evaluation function name. (Default value = 'hypervolume')
 
         Returns:
-            Set: The final Pareto front.
+            List: The final set of non-dominated distributions.
         """
         if action_eval == 'hypervolume':
             score_func = self.score_hypervolume
@@ -182,7 +191,7 @@ class DDQL:
 
         for episode in range(num_episodes):
             if episode % log_every == 0:
-                print(f'Training episode {episode + 1}')
+                print(f'Training episode {episode}')
 
             state, _ = self.env.reset()
             state = int(np.ravel_multi_index(state, self.env_shape))
@@ -200,19 +209,22 @@ class DDQL:
 
             self.epsilon = max(self.final_epsilon, self.epsilon * self.epsilon_decay)
 
-            if self.log and episode % log_every == 0:
-                pf = self.get_local_pcs(state=0)
+            if episode % log_every == 0:
+                pf = self.get_local_dcs(state=0)
+                evs = [dist.expected_value() for dist in pf]
+                print(evs)
                 value = dist_hypervolume(self.ref_point, pf)
-                print(f'Hypervolume in episode {episode}: {value}')
-                self.writer.add_scalar("train/hypervolume", value, episode)
+                print(f'Hypervolume after episode {episode}: {value}')
+                if self.log:
+                    self.writer.add_scalar("train/hypervolume", value, episode)
 
-        return self.get_local_pcs(state=0)
+        return self.get_local_dcs(state=0)
 
     def track_policy(self, vec):
         """Track a policy from its return vector.
 
         Args:
-            vec (array_like):
+            vec (array_like): The return vector.
         """
         target = np.array(vec)
         state, _ = self.env.reset()
@@ -241,14 +253,14 @@ class DDQL:
 
         return total_rew
 
-    def get_local_pcs(self, state=0):
-        """Collect the local PCS in a given state.
+    def get_local_dcs(self, state=0):
+        """Collect the local DCS in a given state.
 
         Args:
-            state (int, optional): The state to get a local PCS for. (Default value = 0)
+            state (int, optional): The state to get a local DCS for. (Default value = 0)
 
         Returns:
-            Set: A set of Pareto optimal vectors.
+            Set: A set of distributional optimal vectors.
         """
         q_dists = [self.get_q_dists(state, action) for action in range(self.num_actions)]
         candidates = [q_dist for q_dist_list in q_dists for q_dist in q_dist_list]
