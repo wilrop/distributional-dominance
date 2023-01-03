@@ -15,8 +15,8 @@ def deep_sea_treasure():
     ref_point = np.array([0, -25])
     gamma = 1.
     initial_epsilon = 1.0
-    epsilon_decay = 0.99
-    final_epsilon = 0.1
+    epsilon_decay = 0.9975
+    final_epsilon = 0.2
     num_atoms = (125, 21)
     v_mins = (0., -20.)
     v_maxs = (124., 0.)
@@ -27,7 +27,7 @@ def deep_sea_treasure():
     dimoq = DIMOQ(env, ref_point, gamma, initial_epsilon, epsilon_decay, final_epsilon, num_atoms, v_mins, v_maxs, seed,
                   project_name, experiment_name, log)
 
-    dimoq.train(num_episodes=3000, log_every=50)
+    dimoq.train(num_episodes=3000, log_every=10)
 
     distributional_set = dimoq.get_local_dcs()
     for dist in distributional_set:
