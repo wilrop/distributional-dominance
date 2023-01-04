@@ -8,7 +8,7 @@ class RandomMOMDP(gym.Env):
     """A class to generate random MOMDPs."""
 
     def __init__(self, num_states, num_objectives, num_actions, num_next_states, num_terminal_states, reward_min,
-                 reward_max, reward_dist='uniform', start_state=0, max_timestep=5, seed=None):
+                 reward_max, reward_dist='uniform', start_state=0, max_timesteps=None, seed=None):
         self.seed = seed
         self.rng = np.random.default_rng(seed)
 
@@ -30,7 +30,8 @@ class RandomMOMDP(gym.Env):
         self.observation_space = spaces.Discrete(num_states)
         self.reward_space = spaces.Box(low=reward_min, high=reward_max)
 
-        self.max_timestep = max_timestep
+        self.finite_horizon = max_timesteps is not None
+        self.max_timesteps = max_timesteps
         self._state = start_state
         self._timestep = 0
 
@@ -73,7 +74,9 @@ class RandomMOMDP(gym.Env):
         transition_function = np.zeros((self.num_states, self.num_actions, self.num_states))
         for state in range(self.num_states):
             if state in self._terminal_states:
-                transition_function[state] = np.zeros((self.num_actions, self.num_states))
+                probs = np.zeros((self.num_actions, self.num_states))
+                probs[:, state] = 1
+                transition_function[state] = probs
             else:
                 for action in range(self.num_actions):
                     next_states = self.rng.choice(self.num_states, size=self.num_next_states, replace=False)
@@ -121,10 +124,9 @@ class RandomMOMDP(gym.Env):
             int, ndarray, bool, bool, dict: The next state, the reward, whether the episode is done, whether the episode
                 is truncated and no info.
         """
-
         next_state = self.rng.choice(self.num_states, p=self._transition_function[self._state, action])
         rewards = self._reward_function[self._state, action, next_state]
         self._state = next_state
         self._timestep += 1
 
-        return self._state, rewards, self._state in self._terminal_states, self._timestep == self.max_timestep, {}
+        return self._state, rewards, self._state in self._terminal_states, self._timestep == self.max_timesteps, {}
