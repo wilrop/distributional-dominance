@@ -1,5 +1,6 @@
-from itertools import product
 from collections import defaultdict
+from itertools import product
+
 import numpy as np
 import scipy
 
@@ -145,6 +146,93 @@ class MultivariateCategoricalDistribution:
             expectation += self.dist[idx] * self._idx_to_vec(idx)
         return expectation
 
+    def p(self, vec):
+        """Get the probability of a given vector in the distribution.
+
+        Args:
+            vec (np.ndarray): The vector to get the probability of.
+
+        Returns:
+            float: The probability of the vector.
+        """
+        idx = self._vec_to_idx(vec)
+        return self.dist[idx]
+
+    def nonzero_vecs(self):
+        """Get the nonzero vectors of the distribution."""
+        return [self._idx_to_vec(idx) for idx in np.argwhere(self.dist > 0)]
+
+    def nonzero_vecs_probs(self):
+        """Get the nonzero vectors of the distribution with their probabilities."""
+        return [(self._idx_to_vec(idx), self.dist[tuple(idx)]) for idx in np.argwhere(self.dist > 0)]
+
+    def marginal(self, dim):
+        """Get the marginal distribution of a given dimension.
+
+        Args:
+            dim (int): The dimension to get the marginal distribution of.
+
+        Returns:
+            Distribution: The marginal distribution of the given dimension.
+        """
+        marginal_dist = MultivariateCategoricalDistribution(self.num_atoms[dim], self.v_mins[dim], self.v_maxs[dim])
+        vecs = self.thetas[dim][:-1].reshape(-1, 1)
+        probs = np.zeros(len(vecs))
+        for idx in np.ndindex(*self.num_atoms):
+            marginal_idx = idx[dim]
+            probs[marginal_idx] += self.dist[idx]
+        marginal_dist.static_update(vecs, probs)
+        return marginal_dist
+
+    def js_distance(self, other):
+        """Get the Jensen-Shannon distance between two distributions."""
+        return scipy.spatial.distance.jensenshannon(self.dist.flatten(), other.dist.flatten())
+
+    def spawn(self):
+        """Spawn a new distribution."""
+        return MultivariateCategoricalDistribution(self.num_atoms, self.v_mins, self.v_maxs)
+
+    def project_vec(self, vec, method='nearest'):
+        """Project a vector onto the distribution.
+
+        Args:
+            vec (np.ndarray): The vector to project onto the distribution.
+            method (str, optional): What kind of projection to use for the vector. By default the vector is assumed to
+                be directly indexable in the distribution.
+
+        Returns:
+            list: A list of tuples of the projected vector and the probability of the vector.
+        """
+        if method == 'direct':
+            return [(vec, 1.)]
+        elif method == 'nearest':
+            return [(self._idx_to_vec(self._vec_to_idx(vec)), 1.)]
+        elif method == 'deterministic':
+            vec = self._clip_vec(vec)
+            min_indices = [self._get_min_theta_idx(vec[idx], self.thetas[idx]) for idx in range(self.num_dims)]
+            min_sups = np.array([self.thetas[dim][idx] for dim, idx in enumerate(min_indices)])
+            max_sups = np.array([self.thetas[dim][idx + 1] for dim, idx in enumerate(min_indices)])
+            zetas = (vec - min_sups) / (max_sups - min_sups)
+
+            edges = []
+
+            for min_sup, max_sup, zeta in zip(min_sups, max_sups, zetas):
+                dim_edges = [(min_sup, 1 - zeta), (max_sup, zeta)]
+                edges.append(dim_edges)
+
+            delta_vecs_probs = []
+            for edge in product(*edges):
+                delta_vec = []
+                delta_prob = 1
+                for point, point_prob in edge:
+                    delta_vec.append(point)
+                    delta_prob *= point_prob
+
+                delta_vecs_probs.append((np.array(delta_vec), delta_prob))
+            return delta_vecs_probs
+        else:
+            raise ValueError('Invalid projection method.')
+
     def __add__(self, other):
         """Add two distributions together.
 
@@ -191,89 +279,3 @@ class MultivariateCategoricalDistribution:
             Distribution: The distribution multiplied by the scalar.
         """
         return self.__mul__(scalar)
-
-    def p(self, vec):
-        """Get the probability of a given vector in the distribution.
-
-        Args:
-            vec (np.ndarray): The vector to get the probability of.
-
-        Returns:
-            float: The probability of the vector.
-        """
-        idx = self._vec_to_idx(vec)
-        return self.dist[idx]
-
-    def nonzero_vecs(self):
-        """Get the nonzero vectors of the distribution."""
-        return [self._idx_to_vec(idx) for idx in np.argwhere(self.dist > 0)]
-
-    def marginal(self, dim):
-        """Get the marginal distribution of a given dimension.
-
-        Args:
-            dim (int): The dimension to get the marginal distribution of.
-
-        Returns:
-            Distribution: The marginal distribution of the given dimension.
-        """
-        marginal_dist = MultivariateCategoricalDistribution(self.num_atoms[dim], self.v_mins[dim], self.v_maxs[dim])
-        vecs = self.thetas[dim][:-1].reshape(-1, 1)
-        probs = np.zeros(len(vecs))
-        for idx in np.ndindex(*self.num_atoms):
-            marginal_idx = idx[dim]
-            probs[marginal_idx] += self.dist[idx]
-        marginal_dist.static_update(vecs, probs)
-        return marginal_dist
-
-    def js_distance(self, other):
-        """Get the Jensen-Shannon distance between two distributions.
-
-        Args:
-            other (Distribution): The other distribution to compute the Jensen-Shannon distance with.
-
-        Returns:
-            float: The Jensen-Shannon distance between the two distributions.
-        """
-        return scipy.spatial.distance.jensenshannon(self.dist.flatten(), other.dist.flatten())
-
-    def project_vec(self, vec, method='nearest'):
-        """Project a vector onto the distribution.
-
-        Args:
-            vec (np.ndarray): The vector to project onto the distribution.
-            method (str, optional): What kind of projection to use for the vector. By default the vector is assumed to
-                be directly indexable in the distribution.
-
-        Returns:
-            list: A list of tuples of the projected vector and the probability of the vector.
-        """
-        if method == 'direct':
-            return [(vec, 1.)]
-        elif method == 'nearest':
-            return [(self._idx_to_vec(self._vec_to_idx(vec)), 1.)]
-        elif method == 'deterministic':
-            vec = self._clip_vec(vec)
-            min_indices = [self._get_min_theta_idx(vec[idx], self.thetas[idx]) for idx in range(self.num_dims)]
-            min_sups = np.array([self.thetas[dim][idx] for dim, idx in enumerate(min_indices)])
-            max_sups = np.array([self.thetas[dim][idx + 1] for dim, idx in enumerate(min_indices)])
-            zetas = (vec - min_sups) / (max_sups - min_sups)
-
-            edges = []
-
-            for min_sup, max_sup, zeta in zip(min_sups, max_sups, zetas):
-                dim_edges = [(min_sup, 1 - zeta), (max_sup, zeta)]
-                edges.append(dim_edges)
-
-            delta_vecs_probs = []
-            for edge in product(*edges):
-                delta_vec = []
-                delta_prob = 1
-                for point, point_prob in edge:
-                    delta_vec.append(point)
-                    delta_prob *= point_prob
-
-                delta_vecs_probs.append((np.array(delta_vec), delta_prob))
-            return delta_vecs_probs
-        else:
-            raise ValueError('Invalid projection method.')
