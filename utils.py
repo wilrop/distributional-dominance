@@ -1,5 +1,6 @@
-import numpy as np
 from collections import defaultdict
+
+import numpy as np
 
 
 def zero_init(dist_class, num_atoms, v_mins, v_maxs):
