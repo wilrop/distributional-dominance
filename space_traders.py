@@ -24,7 +24,20 @@ class SpaceTraders(gym.Env):
                                   'Direct': {'Reward': {'Goal': [1, -8], 'Terminal': [0, -7]},
                                              'Probability': {'Goal': 0.9, 'Terminal': 0.1}},
                                   'Teleport': {'Reward': {'Goal': [1, 0], 'Terminal': [0, 0]},
-                                               'Probability': {'Goal': 0.85, 'Terminal': 0.15}}}}
+                                               'Probability': {'Goal': 0.85, 'Terminal': 0.15}}},
+                            'Goal': {'Indirect': {'Reward': {'Goal': [0, 0]},
+                                                  'Probability': {'Goal': 1.}},
+                                     'Direct': {'Reward': {'Goal': [0, 0]},
+                                                'Probability': {'Goal': 1.}},
+                                     'Teleport': {'Reward': {'Goal': [0, 0]},
+                                                  'Probability': {'Goal': 1.}}},
+                            'Terminal': {'Indirect': {'Reward': {'Terminal': [0, 0]},
+                                                      'Probability': {'Terminal': 1.}},
+                                         'Direct': {'Reward': {'Terminal': [0, 0]},
+                                                    'Probability': {'Terminal': 1.}},
+                                         'Teleport': {'Reward': {'Terminal': [0, 0]},
+                                                      'Probability': {'Terminal': 1.}}}}
+
         self.num_states = len(self.states)
         self.num_actions = len(self.actions)
         self.num_objectives = 2
@@ -41,6 +54,7 @@ class SpaceTraders(gym.Env):
         self._timestep = 0
 
     def _init_functions(self):
+        """Initialize the reward and transition functions."""
         rewards = np.zeros((self.num_states, self.num_actions, self.num_states, self.num_objectives))
         transitions = np.zeros((self.num_states, self.num_actions, self.num_states))
 
@@ -83,5 +97,4 @@ class SpaceTraders(gym.Env):
         self._state = next_state
         self._timestep += 1
 
-        # Return the current state, a reward and whether the episode terminates
         return self._state, rewards, done, self._timestep == 2, {}
