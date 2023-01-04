@@ -8,7 +8,8 @@ class RandomMOMDP(gym.Env):
     """A class to generate random MOMDPs."""
 
     def __init__(self, num_states, num_objectives, num_actions, num_next_states, num_terminal_states, reward_min,
-                 reward_max, start_state=0, seed=None):
+                 reward_max, reward_dist='uniform', start_state=0, seed=None):
+        self.seed = seed
         self.rng = np.random.default_rng(seed)
 
         self.num_states = num_states
@@ -18,20 +19,51 @@ class RandomMOMDP(gym.Env):
         self.num_terminal_states = num_terminal_states
         self.reward_min = reward_min
         self.reward_max = reward_max
+        self.reward_dist = reward_dist
         self.start_state = start_state
 
-        self._reward_function = self.rng.uniform(low=reward_min, high=reward_max,
-                                                 size=(num_states, num_actions, num_next_states, num_objectives))
-        self._terminal_states = self.rng.choice(num_states, size=num_terminal_states, replace=False)
-        self._transition_function = self.__init_transition_function()
+        self._reward_function = self._init_reward_function()
+        self._terminal_states = self._init_terminal_states()
+        self._transition_function = self._init_transition_function()
 
         self.action_space = spaces.Discrete(num_actions)
         self.observation_space = spaces.Discrete(num_states)
+        self.reward_space = spaces.Box(low=reward_min, high=reward_max)
 
         self._state = start_state
         self._timestep = 0
 
-    def __init_transition_function(self):
+    def _init_terminal_states(self):
+        """Initialize the terminal states.
+
+        Returns:
+            ndarray: A list of terminal states.
+        """
+        if self.num_terminal_states > self.num_states:
+            raise ValueError('The number of terminal states cannot be greater than the number of states')
+        elif self.start_state is None:
+            candidates = np.arange(self.num_states)
+        else:
+            candidates = np.delete(np.arange(self.num_states), self.start_state)
+
+        return self.rng.choice(candidates, size=self.num_terminal_states, replace=False)
+
+    def _init_reward_function(self):
+        """Generate a reward function with rewards drawn from a given distribution."""
+        if self.reward_dist == 'uniform':
+            return self.rng.uniform(low=self.reward_min, high=self.reward_max,
+                                    size=(self.num_states, self.num_actions, self.num_states, self.num_objectives))
+        elif self.reward_dist == 'discrete':
+            return self.rng.integers(low=self.reward_min,
+                                     high=self.reward_max,
+                                     size=(self.num_states,
+                                           self.num_actions,
+                                           self.num_states,
+                                           self.num_objectives))
+        else:
+            raise ValueError("Invalid reward distribution")
+
+    def _init_transition_function(self):
         """Initialize the transition function.
 
         Returns:
@@ -44,8 +76,9 @@ class RandomMOMDP(gym.Env):
             else:
                 for action in range(self.num_actions):
                     next_states = self.rng.choice(self.num_states, size=self.num_next_states, replace=False)
-                    for next_state in next_states:
-                        self._transition_function[state, action, next_state] = 1 / self.num_next_states
+                    probs = np.random.dirichlet(np.ones(self.num_next_states))
+                    for next_state, prob in zip(next_states, probs):
+                        transition_function[state, action, next_state] = prob
         return transition_function
 
     def get_config(self):
@@ -58,6 +91,7 @@ class RandomMOMDP(gym.Env):
             "reward_min": self.reward_min,
             "reward_max": self.reward_max,
             "start_state": self.start_state,
+            "seed": self.seed
         }
 
     def reset(self, seed=None, start_state=None):
@@ -68,13 +102,13 @@ class RandomMOMDP(gym.Env):
             start_state (int, optional): The state to start in. (Default value = None)
 
         Returns:
-            int, None: The initial state and no info.
+            int, Dict: The initial state and no info.
         """
         # Pick an initial state at random
         self._state = start_state if start_state is not None else self.start_state
         self._timestep = 0
 
-        return self._state, None
+        return self._state, {}
 
     def step(self, action):
         """Take a step in the environment.
@@ -86,7 +120,7 @@ class RandomMOMDP(gym.Env):
             int, ndarray, bool, bool, dict: The next state, the reward, whether the episode is done, whether the episode
                 is truncated and no info.
         """
-        # Change state using the transition function
+
         next_state = self.rng.choice(self.num_states, p=self._transition_function[self._state, action])
         rewards = self._reward_function[self._state, action, next_state]
         self._state = next_state
