@@ -1,5 +1,5 @@
 from itertools import product
-
+from collections import defaultdict
 import numpy as np
 import scipy
 
@@ -88,7 +88,7 @@ class MultivariateCategoricalDistribution:
             tuple: The index of the vector in the distribution.
         """
         idx = (vec - self.v_mins) / self.gaps
-        return tuple([int(val) for val in idx])
+        return tuple([round(val) for val in idx])
 
     def _idx_to_vec(self, idx):
         """Get the vector of the index in the distribution.
@@ -142,7 +142,7 @@ class MultivariateCategoricalDistribution:
         """Compute the expected value of the distribution."""
         expectation = np.zeros(self.num_dims)
         for idx in np.ndindex(*self.num_atoms):
-            expectation += self.dist[idx] * np.array([dim_thetas[i] for dim_thetas, i in zip(self.thetas, idx)])
+            expectation += self.dist[idx] * self._idx_to_vec(idx)
         return expectation
 
     def __add__(self, other):
@@ -154,11 +154,12 @@ class MultivariateCategoricalDistribution:
         Returns:
             Distribution: The sum of the two distributions.
         """
-        vec_probs = {}
+        vec_probs = defaultdict(lambda: 0)
+
         for vec1 in self.nonzero_vecs():
             for vec2 in other.nonzero_vecs():
                 vec = self._clip_vec(vec1 + vec2)
-                vec_probs[tuple(vec)] = self.p(vec1) * other.p(vec2)
+                vec_probs[tuple(vec)] += self.p(vec1) * other.p(vec2)
 
         new_dist = MultivariateCategoricalDistribution(self.num_atoms, self.v_mins, self.v_maxs)
         new_dist.static_update(list(vec_probs.keys()), list(vec_probs.values()))
@@ -173,11 +174,23 @@ class MultivariateCategoricalDistribution:
         Returns:
             Distribution: The distribution multiplied by the scalar.
         """
-        vecs = self._get_vecs()
+        vecs = self.nonzero_vecs()
+        probs = [self.p(vec) for vec in vecs]
         vecs = list(np.array(vecs) * scalar)
         new_dist = MultivariateCategoricalDistribution(self.num_atoms, self.v_mins, self.v_maxs)
-        new_dist.static_update(vecs, self.dist.flatten())
+        new_dist.static_update(vecs, probs)
         return new_dist
+
+    def __rmul__(self, scalar):
+        """Multiply the distribution by a scalar.
+
+        Args:
+            scalar (float): The scalar to multiply the distribution by.
+
+        Returns:
+            Distribution: The distribution multiplied by the scalar.
+        """
+        return self.__mul__(scalar)
 
     def p(self, vec):
         """Get the probability of a given vector in the distribution.
@@ -224,20 +237,22 @@ class MultivariateCategoricalDistribution:
         """
         return scipy.spatial.distance.jensenshannon(self.dist.flatten(), other.dist.flatten())
 
-    def project_vec(self, vec, direct=True):
+    def project_vec(self, vec, method='nearest'):
         """Project a vector onto the distribution.
 
         Args:
             vec (np.ndarray): The vector to project onto the distribution.
-            direct (bool): Whether to project the vector directly onto the distribution, which assumes that the exact
-                bins exist. Otherwise, a deterministic projection is computed.
+            method (str, optional): What kind of projection to use for the vector. By default the vector is assumed to
+                be directly indexable in the distribution.
 
         Returns:
             list: A list of tuples of the projected vector and the probability of the vector.
         """
-        if direct:
+        if method == 'direct':
             return [(vec, 1.)]
-        else:
+        elif method == 'nearest':
+            return [(self._idx_to_vec(self._vec_to_idx(vec)), 1.)]
+        elif method == 'deterministic':
             vec = self._clip_vec(vec)
             min_indices = [self._get_min_theta_idx(vec[idx], self.thetas[idx]) for idx in range(self.num_dims)]
             min_sups = np.array([self.thetas[dim][idx] for dim, idx in enumerate(min_indices)])
@@ -260,3 +275,5 @@ class MultivariateCategoricalDistribution:
 
                 delta_vecs_probs.append((np.array(delta_vec), delta_prob))
             return delta_vecs_probs
+        else:
+            raise ValueError('Invalid projection method.')
