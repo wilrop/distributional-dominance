@@ -1,4 +1,5 @@
 import numpy as np
+from collections import defaultdict
 
 
 def zero_init(dist_class, num_atoms, v_mins, v_maxs):
@@ -32,3 +33,30 @@ def delta_dist(dist_class, num_atoms, v_mins, v_maxs, value):
     dist = dist_class(num_atoms, v_mins, v_maxs)
     dist.static_update([value], [1])
     return dist
+
+
+def create_mixture_distribution(dists, probs, dist_class, num_atoms, v_mins, v_maxs):
+    """Create a mixture distribution.
+
+    Args:
+        dists (list): A list of distributions.
+        probs (list): A probability for each distribution.
+        dist_class (class): The class of the mixture distribution
+        num_atoms (ndarray): The number of atoms per dimension.
+        v_mins (ndarray): The minimum values.
+        v_maxs (ndarray): The maximum values.
+
+    Returns:
+        Dist: A distribution.
+    """
+    vecs_probs = defaultdict(lambda: 0)
+
+    for dist, dist_prob in zip(dists, probs):
+        for vec, vec_prob in dist.nonzero_vecs_probs():
+            vecs_probs[tuple(vec)] += vec_prob * dist_prob
+
+    vecs = np.array(list(vecs_probs.keys()))
+    probs = np.array(list(vecs_probs.values()))
+    new_dist = zero_init(dist_class, num_atoms, v_mins, v_maxs)
+    new_dist.static_update(vecs, probs)
+    return new_dist
