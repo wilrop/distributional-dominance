@@ -8,7 +8,7 @@ class RandomMOMDP(gym.Env):
     """A class to generate random MOMDPs."""
 
     def __init__(self, num_states, num_objectives, num_actions, num_next_states, num_terminal_states, reward_min,
-                 reward_max, reward_dist='uniform', start_state=0, seed=None):
+                 reward_max, reward_dist='uniform', start_state=0, max_timestep=5, seed=None):
         self.seed = seed
         self.rng = np.random.default_rng(seed)
 
@@ -30,6 +30,7 @@ class RandomMOMDP(gym.Env):
         self.observation_space = spaces.Discrete(num_states)
         self.reward_space = spaces.Box(low=reward_min, high=reward_max)
 
+        self.max_timestep = max_timestep
         self._state = start_state
         self._timestep = 0
 
@@ -126,5 +127,4 @@ class RandomMOMDP(gym.Env):
         self._state = next_state
         self._timestep += 1
 
-        # Return the current state, a reward and whether the episode terminates
-        return self._state, rewards, self._state in self._terminal_states, self._timestep == 50, {}
+        return self._state, rewards, self._state in self._terminal_states, self._timestep == self.max_timestep, {}
