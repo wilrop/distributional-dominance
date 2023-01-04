@@ -1,11 +1,13 @@
 import numpy as np
 import wandb
+from gym.spaces import Box
 from torch.utils.tensorboard import SummaryWriter
 
 from count_based_mcd import CountBasedMCD
 from dist_dom import dd_prune
 from dist_metrics import dist_hypervolume
 from multivariate_categorical_distribution import MultivariateCategoricalDistribution
+from utils import zero_init
 
 
 class DIMOQ:
@@ -47,15 +49,19 @@ class DIMOQ:
         # Internal Q-learning variables
         self.env = env
         self.num_actions = self.env.action_space.n
-        low_bound = self.env.observation_space.low
-        high_bound = self.env.observation_space.high
-        self.env_shape = (high_bound[0] - low_bound[0] + 1, high_bound[1] - low_bound[1] + 1)
-        self.num_states = np.prod(self.env_shape)
+        if isinstance(self.env.observation_space, Box):
+            low_bound = self.env.observation_space.low
+            high_bound = self.env.observation_space.high
+            self.env_shape = (high_bound[0] - low_bound[0] + 1, high_bound[1] - low_bound[1] + 1)
+            self.num_states = np.prod(self.env_shape)
+        else:
+            self.num_states = self.env.observation_space.n
+            self.env_shape = (self.num_states,)
         self.num_objectives = self.env.reward_space.shape[0]
-        self.non_dominated = [[[self.__zero_init(MultivariateCategoricalDistribution)] for _ in range(self.num_actions)]
-                              for _ in range(self.num_states)]
-        self.reward_dists = [[self.__zero_init(CountBasedMCD) for _ in range(self.num_actions)] for _ in
-                             range(self.num_states)]
+        self.non_dominated = [[[zero_init(MultivariateCategoricalDistribution, num_atoms, v_mins, v_maxs)] for _ in
+                               range(self.num_actions)] for _ in range(self.num_states)]
+        self.reward_dists = [[zero_init(CountBasedMCD, num_atoms, v_mins, v_maxs) for _ in range(self.num_actions)] for
+                             _ in range(self.num_states)]
 
         # Logging
         self.project_name = project_name
@@ -64,19 +70,6 @@ class DIMOQ:
 
         if self.log:
             self.setup_wandb()
-
-    def __zero_init(self, dist_class):
-        """Initialize a distribution with zero values.
-
-        Args:
-            dist_class (class): The distribution class.
-
-        Returns:
-            Dist: A distribution.
-        """
-        dist = dist_class(self.num_atoms, self.v_mins, self.v_maxs)
-        dist.static_update([np.zeros(self.num_objectives)], [1])
-        return dist
 
     def setup_wandb(self):
         """Set up the wandb logging."""
@@ -173,6 +166,20 @@ class DIMOQ:
         non_dominated = dd_prune(q_dists)
         return non_dominated
 
+    def _flatten_state(self, state):
+        """Flatten a state.
+
+        Args:
+            state (int): The current state.
+
+        Returns:
+            int: The flattened state.
+        """
+        if isinstance(self.env.observation_space, Box):
+            return np.ravel_multi_index(state, self.env_shape)
+        else:
+            return state
+
     def train(self, num_episodes=3000, log_every=100, action_eval='hypervolume'):
         """Learn the distributional dominance set.
 
@@ -194,14 +201,14 @@ class DIMOQ:
                 print(f'Training episode {episode}')
 
             state, _ = self.env.reset()
-            state = int(np.ravel_multi_index(state, self.env_shape))
+            state = self._flatten_state(state)
             terminated = False
             truncated = False
 
             while not (terminated or truncated):
                 action = self.select_action(state, score_func)
                 next_state, reward, terminated, truncated, _ = self.env.step(action)
-                next_state = int(np.ravel_multi_index(next_state, self.env_shape))
+                next_state = self._flatten_state(next_state)
 
                 self.non_dominated[state][action] = self.calc_non_dominated(next_state)
                 self.reward_dists[state][action].update(reward)
@@ -233,7 +240,7 @@ class DIMOQ:
         total_rew = np.zeros(self.num_objectives)
 
         while not (terminated or truncated):
-            state = np.ravel_multi_index(state, self.env_shape)
+            state = self._flatten_state(state)
             new_target = False
 
             for action in range(self.num_actions):
