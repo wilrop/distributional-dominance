@@ -80,7 +80,7 @@ class RandomMOMDP(gym.Env):
             else:
                 for action in range(self.num_actions):
                     next_states = self.rng.choice(self.num_states, size=self.num_next_states, replace=False)
-                    probs = np.random.dirichlet(np.ones(self.num_next_states))
+                    probs = self.rng.dirichlet(np.ones(self.num_next_states))
                     for next_state, prob in zip(next_states, probs):
                         transition_function[state, action, next_state] = prob
         return transition_function
