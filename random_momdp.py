@@ -22,8 +22,8 @@ class RandomMOMDP(gym.Env):
         self.reward_dist = reward_dist
         self.start_state = start_state
 
-        self._reward_function = self._init_reward_function()
         self._terminal_states = self._init_terminal_states()
+        self._reward_function = self._init_reward_function()
         self._transition_function = self._init_transition_function()
 
         self.action_space = spaces.Discrete(num_actions)
@@ -53,17 +53,18 @@ class RandomMOMDP(gym.Env):
     def _init_reward_function(self):
         """Generate a reward function with rewards drawn from a given distribution."""
         if self.reward_dist == 'uniform':
-            return self.rng.uniform(low=self.reward_min, high=self.reward_max,
-                                    size=(self.num_states, self.num_actions, self.num_states, self.num_objectives))
+            reward_function = self.rng.uniform(low=self.reward_min, high=self.reward_max, size=(
+            self.num_states, self.num_actions, self.num_states, self.num_objectives))
         elif self.reward_dist == 'discrete':
-            return self.rng.integers(low=self.reward_min,
-                                     high=self.reward_max,
-                                     size=(self.num_states,
-                                           self.num_actions,
-                                           self.num_states,
-                                           self.num_objectives))
+            reward_function = self.rng.integers(low=self.reward_min, high=self.reward_max, size=(
+            self.num_states, self.num_actions, self.num_states, self.num_objectives))
         else:
             raise ValueError("Invalid reward distribution")
+
+        for state in self._terminal_states:
+            reward_function[state, :, state, :] = 0
+
+        return reward_function
 
     def _init_transition_function(self):
         """Initialize the transition function.
@@ -74,9 +75,7 @@ class RandomMOMDP(gym.Env):
         transition_function = np.zeros((self.num_states, self.num_actions, self.num_states))
         for state in range(self.num_states):
             if state in self._terminal_states:
-                probs = np.zeros((self.num_actions, self.num_states))
-                probs[:, state] = 1
-                transition_function[state] = probs
+                transition_function[state, :, state] = 1
             else:
                 for action in range(self.num_actions):
                     next_states = self.rng.choice(self.num_states, size=self.num_next_states, replace=False)
