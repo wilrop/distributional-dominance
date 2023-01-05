@@ -1,13 +1,15 @@
+from itertools import product
+
 from dist_dom import dd_prune
 from multivariate_categorical_distribution import MultivariateCategoricalDistribution
 from utils import zero_init, delta_dist, create_mixture_distribution
-from itertools import product
 
 
 class MODVI:
     """
     Implement the Multi-Objective Distributional Value Iteration (MODVI) algorithm.
     """
+
     def __init__(self, env, gamma, num_atoms, v_mins, v_maxs):
         self.env = env
         self.gamma = gamma
@@ -50,13 +52,16 @@ class MODVI:
         return reward_dists
 
     def _init_q_dists(self):
-        return [[[zero_init(MultivariateCategoricalDistribution, self.num_atoms, self.v_mins, self.v_maxs)] for _ in range(self.num_actions)] for _ in range(self.num_states)]
+        return [[[zero_init(MultivariateCategoricalDistribution, self.num_atoms, self.v_mins, self.v_maxs)] for _ in
+                 range(self.num_actions)] for _ in range(self.num_states)]
 
     def _init_return_dists(self):
         if self.finite_horizon:
             return_dists = []
             for _ in range(self.env.max_timesteps + 1):
-                return_dists.append([[zero_init(MultivariateCategoricalDistribution, self.num_atoms, self.v_mins, self.v_maxs)] for _ in range(self.num_states)])
+                return_dists.append(
+                    [[zero_init(MultivariateCategoricalDistribution, self.num_atoms, self.v_mins, self.v_maxs)] for _ in
+                     range(self.num_states)])
         else:
             return_dists = [[zero_init(MultivariateCategoricalDistribution, self.num_atoms, self.v_mins, self.v_maxs)]
                             for _ in range(self.num_states)]
@@ -74,7 +79,8 @@ class MODVI:
         """
         res = []
         for dists in product(*list_of_dists):
-            mixture = create_mixture_distribution(dists, probs, MultivariateCategoricalDistribution, self.num_atoms, self.v_mins, self.v_maxs)
+            mixture = create_mixture_distribution(dists, probs, MultivariateCategoricalDistribution, self.num_atoms,
+                                                  self.v_mins, self.v_maxs)
             res.append(mixture)
         return res
 
@@ -95,13 +101,13 @@ class MODVI:
 
                             if prob > 0:
                                 probs.append(prob)
-                                prob_set = []
+                                next_state_set = []
 
-                                for return_dist in self.return_dists[t+1][next_state]:
+                                for return_dist in self.return_dists[t + 1][next_state]:
                                     q_dist = self.reward_dists[state][action][next_state] + self.gamma * return_dist
-                                    prob_set.append(q_dist)
+                                    next_state_set.append(q_dist)
 
-                                q_dists.append(prob_set)
+                                q_dists.append(next_state_set)
 
                         self.q_dists[state][action] = self._cross_sum(q_dists, probs)
 
@@ -127,13 +133,13 @@ class MODVI:
 
                         if prob > 0:
                             probs.append(prob)
-                            prob_set = []
+                            next_state_set = []
 
                             for return_dist in self.return_dists[next_state]:
                                 q_dist = self.reward_dists[state][action][next_state] + self.gamma * return_dist
-                                prob_set.append(q_dist)
+                                next_state_set.append(q_dist)
 
-                            q_dists.append(prob_set)
+                            q_dists.append(next_state_set)
 
                     self.q_dists[state][action] = self._cross_sum(q_dists, probs)
 
