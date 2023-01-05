@@ -28,7 +28,7 @@ class RandomMOMDP(gym.Env):
 
         self.action_space = spaces.Discrete(num_actions)
         self.observation_space = spaces.Discrete(num_states)
-        self.reward_space = spaces.Box(low=reward_min, high=reward_max)
+        self.reward_space = spaces.Box(low=reward_min, high=reward_max, dtype=np.float32)
 
         self.finite_horizon = max_timesteps is not None
         self.max_timesteps = max_timesteps
@@ -125,8 +125,8 @@ class RandomMOMDP(gym.Env):
                 is truncated and no info.
         """
         next_state = self.rng.choice(self.num_states, p=self._transition_function[self._state, action])
-        rewards = self._reward_function[self._state, action, next_state]
+        reward = self._reward_function[self._state, action, next_state]
         self._state = next_state
         self._timestep += 1
 
-        return self._state, rewards, self._state in self._terminal_states, self._timestep == self.max_timesteps, {}
+        return self._state, reward, self._state in self._terminal_states, self._timestep >= self.max_timesteps, {}
