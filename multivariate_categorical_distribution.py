@@ -8,7 +8,7 @@ import scipy
 class MultivariateCategoricalDistribution:
     """A class to represent a multivariate categorical distribution."""
 
-    def __init__(self, num_atoms, v_mins, v_maxs, name=None):
+    def __init__(self, num_atoms, v_mins, v_maxs, decimals=4, name=None):
         # Check if the num atoms is a number and if so wrap it in a list and numpy array.
         if isinstance(num_atoms, (int, float, np.number)):
             num_atoms = np.array([num_atoms])
@@ -30,6 +30,7 @@ class MultivariateCategoricalDistribution:
         self.num_dims = len(num_atoms)
         self.v_mins = v_mins
         self.v_maxs = v_maxs
+        self.decimals = decimals
         self.name = name
 
         self.gaps = (v_maxs - v_mins) / (num_atoms - 1)
@@ -130,6 +131,9 @@ class MultivariateCategoricalDistribution:
                     idx = self._vec_to_idx(delta_vec)
                     self.dist[idx] += delta_prob
 
+        self.dist /= np.sum(self.dist)  # Normalize the distribution.
+        if self.decimals is not None:
+            self.dist = np.around(self.dist, decimals=self.decimals)  # Round the distribution
         self.cdf = self.get_cdf()
 
     def get_cdf(self):
