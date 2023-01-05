@@ -38,6 +38,8 @@ class SpaceTraders(gym.Env):
                                          'Teleport': {'Reward': {'Terminal': [0, 0]},
                                                       'Probability': {'Terminal': 1.}}}}
 
+        self.finite_horizon = True
+        self.max_timesteps = 2
         self.num_states = len(self.states)
         self.num_actions = len(self.actions)
         self.num_objectives = 2
@@ -97,4 +99,4 @@ class SpaceTraders(gym.Env):
         self._state = next_state
         self._timestep += 1
 
-        return self._state, rewards, done, self._timestep == 2, {}
+        return self._state, rewards, done, self._timestep == self.max_timesteps, {}
