@@ -96,8 +96,8 @@ class RandomMOMDP(gym.Env):
             "num_objectives": self.num_objectives,
             "num_actions": self.num_actions,
             "num_next_states": self.num_next_states,
-            "reward_min": self.reward_min,
-            "reward_max": self.reward_max,
+            "reward_min": self.reward_min.tolist(),
+            "reward_max": self.reward_max.tolist(),
             "start_state": self.start_state,
             "seed": self.seed
         }
