@@ -18,9 +18,10 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=3, help="The seed for random number generation.")
     parser.add_argument("--env", type=str, nargs='+', default=["small"], help="The environments to run experiments on.")
+    parser.add_argument("--augment-env", action='store_true', default=True, help="Whether to augment the environment.")
     parser.add_argument("--alg", type=str, default='DIMOQ', help="The algorithm to use.")
-    parser.add_argument("--num-episodes", type=int, default=500, help="The number of episodes to run.")
-    parser.add_argument('--max-timesteps', type=int, default=2, help="The maximum number of timesteps per episode.")
+    parser.add_argument("--num-episodes", type=int, default=2000, help="The number of episodes to run.")
+    parser.add_argument('--max-timesteps', type=int, default=3, help="The maximum number of timesteps per episode.")
     parser.add_argument('--gamma', type=float, default=1., help='The discount factor.')
     parser.add_argument('--log', action='store_true', default=False, help='Whether to log the results.')
     parser.add_argument('--log-every', type=int, default=100, help='The number of episodes between logging.')
@@ -150,7 +151,7 @@ def small_momdp(args):
     start_state = 0
     env = RandomMOMDP(num_states, num_objectives, num_actions, num_next_states, num_terminal_states, reward_min,
                       reward_max, reward_dist='discrete', start_state=start_state, max_timesteps=args.max_timesteps,
-                      seed=args.seed)
+                      seed=args.seed, augment_state=args.augment_env)
 
     # DIMOQ variables
     ref_point = np.array([0, 0])
