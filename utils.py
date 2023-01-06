@@ -106,3 +106,10 @@ def load_dists(dir_path, dist_class):
         dists.append(dist)
 
     return dists
+
+
+def save_momdp(momdp, dir_path, file_name):
+    file_name += '.json'
+    config = momdp.get_config()
+    with open(os.path.join(dir_path, file_name), 'w') as f:
+        json.dump(config, f)
