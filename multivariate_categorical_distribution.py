@@ -1,6 +1,6 @@
 from collections import defaultdict
 from itertools import product
-
+import os
 import numpy as np
 import scipy
 import json
@@ -290,20 +290,28 @@ class MultivariateCategoricalDistribution:
             'num_atoms': self.num_atoms.tolist(),
             'v_mins': self.v_mins.tolist(),
             'v_maxs': self.v_maxs.tolist(),
+            'name': self.name
         }
 
-    def save(self, path):
+    def save(self, dir_path, file_name=None):
         """Save the distribution to a file.
 
         Args:
-            path (str): The path to save the distribution to.
+            dir_path (str): The directory to save the distribution to.
         """
         save_data = self.get_config()
         save_data['dist'] = {}
         for vec, prob in self.nonzero_vecs_probs():
             save_data['dist'][tuple(vec)] = prob
 
-        with open(path, 'w') as f:
+        if file_name is None:
+            if self.name is None:
+                file_name = 'dist'
+            else:
+                file_name = self.name
+
+        file_name += '.json'
+        with open(os.path.join(dir_path, file_name), 'w') as f:
             json.dump(save_data, f)
 
     def load(self, path):
