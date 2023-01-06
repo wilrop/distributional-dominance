@@ -1,9 +1,10 @@
+import json
+import os
 from collections import defaultdict
 from itertools import product
-import os
+
 import numpy as np
 import scipy
-import json
 
 
 class MultivariateCategoricalDistribution:
@@ -300,9 +301,10 @@ class MultivariateCategoricalDistribution:
             dir_path (str): The directory to save the distribution to.
         """
         save_data = self.get_config()
-        save_data['dist'] = {}
+        save_data['dist'] = {'vecs': [], 'probs': []}
         for vec, prob in self.nonzero_vecs_probs():
-            save_data['dist'][tuple(vec)] = prob
+            save_data['dist']['vecs'].append(vec.tolist())
+            save_data['dist']['probs'].append(prob)
 
         if file_name is None:
             if self.name is None:
@@ -322,11 +324,4 @@ class MultivariateCategoricalDistribution:
         """
         with open(path, 'r') as f:
             dist_data = json.load(f)
-
-        vecs = []
-        probs = []
-        for vec, prob in dist_data['dist'].items():
-            vecs.append(vec)
-            probs.append(prob)
-
-        self.static_update(vecs, probs)
+        self.static_update(dist_data['dist']['vecs'], dist_data['dist']['probs'])
