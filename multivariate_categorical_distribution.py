@@ -3,6 +3,7 @@ from itertools import product
 
 import numpy as np
 import scipy
+import json
 
 
 class MultivariateCategoricalDistribution:
@@ -283,3 +284,41 @@ class MultivariateCategoricalDistribution:
             Distribution: The distribution multiplied by the scalar.
         """
         return self.__mul__(scalar)
+
+    def get_config(self):
+        return {
+            'num_atoms': self.num_atoms.tolist(),
+            'v_mins': self.v_mins.tolist(),
+            'v_maxs': self.v_maxs.tolist(),
+        }
+
+    def save(self, path):
+        """Save the distribution to a file.
+
+        Args:
+            path (str): The path to save the distribution to.
+        """
+        save_data = self.get_config()
+        save_data['dist'] = {}
+        for vec, prob in self.nonzero_vecs_probs():
+            save_data['dist'][tuple(vec)] = prob
+
+        with open(path, 'w') as f:
+            json.dump(save_data, f)
+
+    def load(self, path):
+        """Load the distribution from a file.
+
+        Args:
+            path (str): The path to load the distribution from.
+        """
+        with open(path, 'r') as f:
+            dist_data = json.load(f)
+
+        vecs = []
+        probs = []
+        for vec, prob in dist_data['dist'].items():
+            vecs.append(vec)
+            probs.append(prob)
+
+        self.static_update(vecs, probs)
