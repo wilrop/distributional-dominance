@@ -1,3 +1,5 @@
+import json
+import os
 from collections import defaultdict
 
 import numpy as np
@@ -61,3 +63,46 @@ def create_mixture_distribution(dists, probs, dist_class, num_atoms, v_mins, v_m
     new_dist = zero_init(dist_class, num_atoms, v_mins, v_maxs)
     new_dist.static_update(vecs, probs)
     return new_dist
+
+
+def save_dists(dists, dir_path):
+    """Save a list of distributions to a file.
+
+    Args:
+        dists (list): A list of distributions.
+        dir_path (str): The name of the directory.
+    """
+    for i, dist in enumerate(dists):
+        dist.save(dir_path, file_name=f'dist_{i}')
+
+
+def load_dists(dir_path, dist_class):
+    """Load a list of distributions from a file.
+
+    Args:
+        dir_path (str): The name of the directory.
+
+    Returns:
+        list: A list of distributions.
+    """
+    dists = []
+
+    for file_name in os.listdir(dir_path):
+        with open(os.path.join(dir_path, file_name), 'r') as f:
+            dist_data = json.load(f)
+
+        num_atoms = np.array(dist_data['num_atoms'])
+        v_mins = np.array(dist_data['v_mins'])
+        v_maxs = np.array(dist_data['v_maxs'])
+        name = dist_data['name']
+        dist = dist_class(num_atoms, v_mins, v_maxs, name=name)
+
+        vecs = []
+        probs = []
+        for vec, prob in dist_data['dist'].items():
+            vecs.append(vec)
+            probs.append(prob)
+        dist = dist.static_update(vecs, probs)
+        dists.append(dist)
+
+    return dists
