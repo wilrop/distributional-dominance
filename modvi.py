@@ -88,7 +88,7 @@ class MODVI:
         for i in range(num_iters):
             print(f"Iteration {i}")
 
-            for t in range(self.env.max_timesteps):
+            for t in reversed(range(self.env.max_timesteps)):
                 new_return_dists = [[]] * self.num_states
 
                 for state in range(self.num_states):
