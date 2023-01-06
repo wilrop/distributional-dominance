@@ -72,6 +72,7 @@ def save_dists(dists, dir_path):
         dists (list): A list of distributions.
         dir_path (str): The name of the directory.
     """
+    os.makedirs(dir_path, exist_ok=True)
     for i, dist in enumerate(dists):
         dist.save(dir_path, file_name=f'dist_{i}')
 
@@ -109,6 +110,7 @@ def load_dists(dir_path, dist_class):
 
 
 def save_momdp(momdp, dir_path, file_name):
+    os.makedirs(dir_path, exist_ok=True)
     file_name += '.json'
     config = momdp.get_config()
     with open(os.path.join(dir_path, file_name), 'w') as f:
