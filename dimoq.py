@@ -1,7 +1,5 @@
 import numpy as np
-import wandb
 from gym.spaces import Box
-from torch.utils.tensorboard import SummaryWriter
 from itertools import product
 from count_based_mcd import CountBasedMCD
 from dist_dom import dd_prune
@@ -70,9 +68,6 @@ class DIMOQ:
         self.experiment_name = experiment_name
         self.log = log
 
-        if self.log:
-            self.setup_wandb()
-
     def _init_zero_dists(self, dist_class, squeeze=True):
         """Initialize the distributional Q-set for all state-action-next pairs."""
         zero_dists = []
@@ -90,25 +85,6 @@ class DIMOQ:
             zero_dists.append(state_dists)
 
         return zero_dists
-
-    def setup_wandb(self):
-        """Set up the wandb logging."""
-        self.experiment_name = self.experiment_name
-
-        wandb.init(
-            project=self.project_name,
-            sync_tensorboard=True,
-            config=self.get_config(),
-            name=self.experiment_name,
-            monitor_gym=False,
-            save_code=True,
-        )
-        self.writer = SummaryWriter(f"/tmp/{self.experiment_name}")
-
-    def close_wandb(self):
-        """Close the wandb logging."""
-        self.writer.close()
-        wandb.finish()
 
     def get_config(self) -> dict:
         """Get the configuration dictionary.
@@ -319,10 +295,6 @@ class DIMOQ:
             if episode % log_every == 0:
                 dds = self.get_local_dds(state=0)
                 print(f'Size of the DDS: {len(dds)}')
-                value = dist_hypervolume(self.ref_point, dds)
-                print(f'Hypervolume after episode {episode}: {value}')
-                if self.log:
-                    self.writer.add_scalar("train/hypervolume", value, episode)
 
         return self.get_local_dds(state=0)
 
