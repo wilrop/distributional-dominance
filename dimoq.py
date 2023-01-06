@@ -2,12 +2,13 @@ import numpy as np
 import wandb
 from gym.spaces import Box
 from torch.utils.tensorboard import SummaryWriter
-
+from itertools import product
 from count_based_mcd import CountBasedMCD
 from dist_dom import dd_prune
-from dist_metrics import dist_hypervolume
+from dist_metrics import dist_hypervolume, get_best, max_inter_distance, linear_utility
 from multivariate_categorical_distribution import MultivariateCategoricalDistribution
 from utils import zero_init
+from utils import create_mixture_distribution
 
 
 class DIMOQ:
@@ -26,6 +27,7 @@ class DIMOQ:
             num_atoms: tuple = (51, 51),
             v_mins: tuple = (0., 0.),
             v_maxs: tuple = (1., 1.),
+            max_dists: int = 10,
             seed: int = None,
             project_name: str = "MORL-baselines",
             experiment_name: str = "Pareto Q-Learning",
@@ -45,6 +47,7 @@ class DIMOQ:
         self.num_atoms = num_atoms
         self.v_mins = v_mins
         self.v_maxs = v_maxs
+        self.max_dists = max_dists
 
         # Internal Q-learning variables
         self.env = env
@@ -58,10 +61,9 @@ class DIMOQ:
             self.num_states = self.env.observation_space.n
             self.env_shape = (self.num_states,)
         self.num_objectives = self.env.reward_space.shape[0]
-        self.non_dominated = [[[zero_init(MultivariateCategoricalDistribution, num_atoms, v_mins, v_maxs)] for _ in
-                               range(self.num_actions)] for _ in range(self.num_states)]
-        self.reward_dists = [[zero_init(CountBasedMCD, num_atoms, v_mins, v_maxs) for _ in range(self.num_actions)] for
-                             _ in range(self.num_states)]
+        self.non_dominated = self._init_zero_dists(MultivariateCategoricalDistribution, squeeze=False)
+        self.reward_dists = self._init_zero_dists(CountBasedMCD, squeeze=True)
+        self.transitions = np.zeros((self.num_states, self.num_actions, self.num_states))
 
         # Logging
         self.project_name = project_name
@@ -70,6 +72,24 @@ class DIMOQ:
 
         if self.log:
             self.setup_wandb()
+
+    def _init_zero_dists(self, dist_class, squeeze=True):
+        """Initialize the distributional Q-set for all state-action-next pairs."""
+        zero_dists = []
+        for _ in range(self.num_states):
+            state_dists = []
+            for _ in range(self.num_actions):
+                state_action_dists = []
+                for _ in range(self.num_states):
+                    if squeeze:
+                        dist = zero_init(dist_class, self.num_atoms, self.v_mins, self.v_maxs)
+                    else:
+                        dist = [zero_init(dist_class, self.num_atoms, self.v_mins, self.v_maxs)]
+                    state_action_dists.append(dist)
+                state_dists.append(state_action_dists)
+            zero_dists.append(state_dists)
+
+        return zero_dists
 
     def setup_wandb(self):
         """Set up the wandb logging."""
@@ -117,8 +137,34 @@ class DIMOQ:
         Returns:
             ndarray: A score per action.
         """
-        q_dists = [self.get_q_dists(state, action) for action in range(self.num_actions)]
-        action_scores = [dist_hypervolume(self.ref_point, q_dist) for q_dist in q_dists]
+        q_dists_lst = [self.get_q_dists(state, action) for action in range(self.num_actions)]
+        action_scores = [dist_hypervolume(self.ref_point, q_dists) for q_dists in q_dists_lst]
+        return action_scores
+
+    def score_inter_distance(self, state):
+        """Compute the action scores based upon the maximum inter-distribution distance metric.
+
+        Args:
+            state (int): The current state.
+
+        Returns:
+            ndarray: A score per action.
+        """
+        q_dists_lst = [self.get_q_dists(state, action) for action in range(self.num_actions)]
+        action_scores = [max_inter_distance(q_dists) for q_dists in q_dists_lst]
+        return action_scores
+
+    def score_linear_utility(self, state):
+        """Compute the action scores based upon the linear utility metric.
+
+        Args:
+            state (int): The current state.
+
+        Returns:
+            ndarray: A score per action.
+        """
+        q_dists_lst = [self.get_q_dists(state, action) for action in range(self.num_actions)]
+        action_scores = [linear_utility(q_dists) for q_dists in q_dists_lst]
         return action_scores
 
     def get_q_dists(self, state, action):
@@ -131,9 +177,33 @@ class DIMOQ:
         Returns:
             List[Dist]: A list of Q distributions.
         """
-        nd_dists = self.non_dominated[state][action]
-        reward_dist = self.reward_dists[state][action]
-        q_dists = [reward_dist + nd_dist * self.gamma for nd_dist in nd_dists]
+        transition_function = self.transitions[state, action] / max(1, np.sum(self.transitions[state, action]))
+        mixture_dists = []
+        probs = []
+
+        for next_state in range(self.num_states):
+            prob = transition_function[next_state]
+
+            if prob > 0:
+                probs.append(prob)
+                next_state_set = []
+
+                for nd_dist in self.non_dominated[state][action][next_state]:
+                    return_dist = self.reward_dists[state][action][next_state] + self.gamma * nd_dist
+                    next_state_set.append(return_dist)
+
+                mixture_dists.append(next_state_set)
+
+        if not mixture_dists:
+            return [zero_init(MultivariateCategoricalDistribution, self.num_atoms, self.v_mins, self.v_maxs)]
+
+        q_dists = []
+
+        for dists in product(*mixture_dists):
+            mixture = create_mixture_distribution(dists, probs, MultivariateCategoricalDistribution, self.num_atoms,
+                                                  self.v_mins, self.v_maxs)
+            q_dists.append(mixture)
+
         return q_dists
 
     def select_action(self, state, score_func):
@@ -161,8 +231,8 @@ class DIMOQ:
         Returns:
             Set: A set of Pareto non-dominated vectors.
         """
-        q_dists = [self.get_q_dists(state, action) for action in range(self.num_actions)]
-        q_dists = [q_dist for q_dist_list in q_dists for q_dist in q_dist_list]
+        q_dists_lst = [self.get_q_dists(state, action) for action in range(self.num_actions)]
+        q_dists = [q_dist for q_dists in q_dists_lst for q_dist in q_dists]
         non_dominated = dd_prune(q_dists)
         return non_dominated
 
@@ -180,7 +250,27 @@ class DIMOQ:
         else:
             return state
 
-    def train(self, num_episodes=3000, log_every=100, action_eval='hypervolume'):
+    def warmup(self, num_episodes, score_func):
+        """Run a number of episodes to warm up the agent.
+
+        Args:
+            num_episodes (int): The number of episodes to run.
+        """
+        print(f'Warming up for {num_episodes} episodes...')
+        for _ in range(num_episodes):
+            state, _ = self.env.reset()
+            state = self._flatten_state(state)
+            terminated = False
+            truncated = False
+
+            while not (terminated or truncated):
+                action = self.select_action(state, score_func)
+                next_state, reward, terminated, truncated, _ = self.env.step(action)
+                next_state = self._flatten_state(next_state)
+                self.transitions[state, action, next_state] += 1
+                state = next_state
+
+    def train(self, num_episodes=3000, warmup_time=1000, learn_model=False, log_every=100, action_eval='linear'):
         """Learn the distributional dominance set.
 
         Args:
@@ -193,8 +283,15 @@ class DIMOQ:
         """
         if action_eval == 'hypervolume':
             score_func = self.score_hypervolume
+        elif action_eval == 'distance':
+            score_func = self.score_inter_distance
+        elif action_eval == 'linear':
+            score_func = self.score_linear_utility
         else:
             raise Exception('No other method implemented yet')
+
+        if warmup_time is not None:
+            self.warmup(warmup_time, score_func)
 
         for episode in range(num_episodes):
             if episode % log_every == 0:
@@ -210,57 +307,26 @@ class DIMOQ:
                 next_state, reward, terminated, truncated, _ = self.env.step(action)
                 next_state = self._flatten_state(next_state)
 
-                self.non_dominated[state][action] = self.calc_non_dominated(next_state)
-                self.reward_dists[state][action].update(reward)
+                new_nd = self.calc_non_dominated(next_state)
+                self.non_dominated[state][action][next_state] = get_best(new_nd, max_dists=self.max_dists)
+                self.reward_dists[state][action][next_state].update(reward)
+                if learn_model:
+                    self.transitions[state, action, next_state] += 1
                 state = next_state
 
             self.epsilon = max(self.final_epsilon, self.epsilon * self.epsilon_decay)
 
             if episode % log_every == 0:
-                pf = self.get_local_dcs(state=0)
-                evs = [dist.expected_value() for dist in pf]
-                print(f'Expected values: {evs}')
-                value = dist_hypervolume(self.ref_point, pf)
+                dds = self.get_local_dds(state=0)
+                print(f'Size of the DDS: {len(dds)}')
+                value = dist_hypervolume(self.ref_point, dds)
                 print(f'Hypervolume after episode {episode}: {value}')
                 if self.log:
                     self.writer.add_scalar("train/hypervolume", value, episode)
 
-        return self.get_local_dcs(state=0)
+        return self.get_local_dds(state=0)
 
-    def track_policy(self, vec):
-        """Track a policy from its return vector.
-
-        Args:
-            vec (array_like): The return vector.
-        """
-        target = np.array(vec)
-        state, _ = self.env.reset()
-        terminated = False
-        truncated = False
-        total_rew = np.zeros(self.num_objectives)
-
-        while not (terminated or truncated):
-            state = self._flatten_state(state)
-            new_target = False
-
-            for action in range(self.num_actions):
-                im_rew = self.reward_dists[state][action].expected_value()
-                nd = self.non_dominated[state][action]
-                for q in nd:
-                    q = np.array(q.expected_value())
-                    if np.all(self.gamma * q + im_rew == target):
-                        state, reward, terminated, truncated, _ = self.env.step(action)
-                        total_rew += reward
-                        target = q
-                        new_target = True
-                        break
-
-                if new_target:
-                    break
-
-        return total_rew
-
-    def get_local_dcs(self, state=0):
+    def get_local_dds(self, state=0):
         """Collect the local DCS in a given state.
 
         Args:
@@ -271,4 +337,4 @@ class DIMOQ:
         """
         q_dists = [self.get_q_dists(state, action) for action in range(self.num_actions)]
         candidates = [q_dist for q_dist_list in q_dists for q_dist in q_dist_list]
-        return dd_prune(candidates)
+        return get_best(dd_prune(candidates), max_dists=self.max_dists)
