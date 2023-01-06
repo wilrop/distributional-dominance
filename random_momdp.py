@@ -8,7 +8,7 @@ class RandomMOMDP(gym.Env):
     """A class to generate random MOMDPs."""
 
     def __init__(self, num_states, num_objectives, num_actions, num_next_states, num_terminal_states, reward_min,
-                 reward_max, reward_dist='uniform', start_state=0, max_timesteps=None, seed=None):
+                 reward_max, reward_dist='uniform', start_state=0, augment_state=False, max_timesteps=None, seed=None):
         self.seed = seed
         self.rng = np.random.default_rng(seed)
 
@@ -27,7 +27,12 @@ class RandomMOMDP(gym.Env):
         self._transition_function = self._init_transition_function()
 
         self.action_space = spaces.Discrete(num_actions)
-        self.observation_space = spaces.Discrete(num_states)
+        self.augment_observation = augment_state and max_timesteps is not None
+        if self.augment_observation:
+            self.observation_space = spaces.Box(low=np.array([0, 0]), high=np.array([max_timesteps, num_states]),
+                                                dtype=np.int32)
+        else:
+            self.observation_space = spaces.Discrete(num_states)
         self.reward_space = spaces.Box(low=reward_min, high=reward_max, dtype=np.float32)
 
         self.finite_horizon = max_timesteps is not None
@@ -54,10 +59,10 @@ class RandomMOMDP(gym.Env):
         """Generate a reward function with rewards drawn from a given distribution."""
         if self.reward_dist == 'uniform':
             reward_function = self.rng.uniform(low=self.reward_min, high=self.reward_max, size=(
-            self.num_states, self.num_actions, self.num_states, self.num_objectives))
+                self.num_states, self.num_actions, self.num_states, self.num_objectives))
         elif self.reward_dist == 'discrete':
             reward_function = self.rng.integers(low=self.reward_min, high=self.reward_max, size=(
-            self.num_states, self.num_actions, self.num_states, self.num_objectives))
+                self.num_states, self.num_actions, self.num_states, self.num_objectives))
         else:
             raise ValueError("Invalid reward distribution")
 
@@ -97,6 +102,17 @@ class RandomMOMDP(gym.Env):
             "seed": self.seed
         }
 
+    def get_obs(self):
+        """Get the current observation.
+
+        Returns:
+            int, Dict: The current state and no info.
+        """
+        if self.augment_observation:
+            return np.array([self._timestep, self._state])
+        else:
+            return self._state
+
     def reset(self, seed=None, start_state=None):
         """Reset the environment.
 
@@ -111,7 +127,7 @@ class RandomMOMDP(gym.Env):
         self._state = start_state if start_state is not None else self.start_state
         self._timestep = 0
 
-        return self._state, {}
+        return self.get_obs(), {}
 
     def step(self, action):
         """Take a step in the environment.
@@ -128,4 +144,4 @@ class RandomMOMDP(gym.Env):
         self._state = next_state
         self._timestep += 1
 
-        return self._state, reward, self._state in self._terminal_states, self._timestep >= self.max_timesteps, {}
+        return self.get_obs(), reward, self._state in self._terminal_states, self._timestep >= self.max_timesteps, {}
