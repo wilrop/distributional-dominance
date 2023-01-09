@@ -19,8 +19,10 @@ from utils import save_dists, save_momdp
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--log-dir', type=str, default='logs', help='The directory to save the logs.')
-    parser.add_argument("--seed", type=int, default=1, help="The seed for random number generation.")
-    parser.add_argument("--env", type=str, nargs='+', default=["small", "medium", "large"], help="The environments to run experiments on.")
+    parser.add_argument("--seed", type=int, nargs='+', default=[1, 2, 3, 4, 5],
+                        help="The seed for random number generation.")
+    parser.add_argument("--env", type=str, nargs='+', default=["small", "medium", "large"],
+                        help="The environments to run experiments on.")
     parser.add_argument("--augment-env", action='store_true', default=True, help="Whether to augment the environment.")
     parser.add_argument("--alg", type=str, default='DIMOQ', help="The algorithm to use.")
     parser.add_argument("--num-episodes", type=int, default=2000, help="The number of episodes to run.")
@@ -90,6 +92,14 @@ def space_traders_params():
 
 
 def random_momdp_params(size):
+    if size == 'small':
+        max_dists = 15
+    elif size == 'medium':
+        max_dists = 30
+    elif size == 'large':
+        max_dists = 45
+    else:
+        raise ValueError(f'Invalid size: {size}')
     return {
         'ref_point': np.array([0, 0]),
         'initial_epsilon': 1.0,
@@ -98,12 +108,13 @@ def random_momdp_params(size):
         'num_atoms': (21, 21),
         'v_mins': (0., 0.),
         'v_maxs': (20., 20.),
+        'max_dists': max_dists,
         'project_name': "Distributional-Dominance",
         'experiment_name': f"DIMOQ-{size}MOMDP"
     }
 
 
-def create_small_momdp(args):
+def create_small_momdp(args, seed):
     num_states = 5
     num_objectives = 2
     num_actions = 2
@@ -116,11 +127,11 @@ def create_small_momdp(args):
     max_timesteps = 3
     env = RandomMOMDP(num_states, num_objectives, num_actions, min_next_states, max_next_states, num_terminal_states,
                       reward_min, reward_max, reward_dist='discrete', start_state=start_state,
-                      max_timesteps=max_timesteps, seed=args.seed, augment_state=args.augment_env)
+                      max_timesteps=max_timesteps, seed=seed, augment_state=args.augment_env)
     return env
 
 
-def create_medium_momdp(args):
+def create_medium_momdp(args, seed):
     num_states = 10
     num_objectives = 2
     num_actions = 3
@@ -133,11 +144,11 @@ def create_medium_momdp(args):
     max_timesteps = 5
     env = RandomMOMDP(num_states, num_objectives, num_actions, min_next_states, max_next_states, num_terminal_states,
                       reward_min, reward_max, reward_dist='discrete', start_state=start_state,
-                      max_timesteps=max_timesteps, seed=args.seed, augment_state=args.augment_env)
+                      max_timesteps=max_timesteps, seed=seed, augment_state=args.augment_env)
     return env
 
 
-def create_large_momdp(args):
+def create_large_momdp(args, seed):
     num_states = 20
     num_objectives = 2
     num_actions = 4
@@ -150,11 +161,11 @@ def create_large_momdp(args):
     max_timesteps = 10
     env = RandomMOMDP(num_states, num_objectives, num_actions, min_next_states, max_next_states, num_terminal_states,
                       reward_min, reward_max, reward_dist='discrete', start_state=start_state,
-                      max_timesteps=max_timesteps, seed=args.seed, augment_state=args.augment_env)
+                      max_timesteps=max_timesteps, seed=seed, augment_state=args.augment_env)
     return env
 
 
-def run_dimoq(env, args, params):
+def run_dimoq(env, args, params, seed):
     dimoq = DIMOQ(env,
                   params['ref_point'],
                   args.gamma,
@@ -164,7 +175,7 @@ def run_dimoq(env, args, params):
                   params['num_atoms'],
                   params['v_mins'],
                   params['v_maxs'],
-                  seed=args.seed,
+                  seed=seed,
                   project_name=params['project_name'],
                   experiment_name=params['experiment_name'],
                   log=args.log)
@@ -187,33 +198,33 @@ if __name__ == "__main__":
     args = parse_args()
 
     for env_name in args.env:
-        if "dst" == env_name:
-            env = mo_gym.make('deep-sea-treasure-v0', dst_map=CONCAVE_MAP)
-            params = dst_params()
-        elif "space-traders" == env_name:
-            env = SpaceTraders(seed=args.seed)
-            params = space_traders_params()
-        elif "small" == env_name:
-            env = create_small_momdp(args)
-            params = random_momdp_params(env_name)
-        elif "medium" == env_name:
-            env = create_medium_momdp(args)
-            params = random_momdp_params(env_name)
-        elif "large" == env_name:
-            env = create_large_momdp(args)
-            params = random_momdp_params(env_name)
-        else:
-            raise ValueError(f'Unknown environment {args.env}')
+        for seed in args.seed:
+            if "dst" == env_name:
+                env = mo_gym.make('deep-sea-treasure-v0', dst_map=CONCAVE_MAP)
+                params = dst_params()
+            elif "space-traders" == env_name:
+                env = SpaceTraders(seed=seed)
+                params = space_traders_params()
+            elif "small" == env_name:
+                env = create_small_momdp(args, seed)
+                params = random_momdp_params(env_name)
+            elif "medium" == env_name:
+                env = create_medium_momdp(args, seed)
+                params = random_momdp_params(env_name)
+            elif "large" == env_name:
+                env = create_large_momdp(args, seed)
+                params = random_momdp_params(env_name)
+            else:
+                raise ValueError(f'Unknown environment {args.env}')
 
-        if args.alg == 'DIMOQ':
-            dds = run_dimoq(env, args, params)
-        elif args.alg == 'MODVI':
-            dds = run_modvi(env, args, params)
-        else:
-            raise ValueError(f'Unknown algorithm {args.alg}')
+            if args.alg == 'DIMOQ':
+                dds = run_dimoq(env, args, params, seed)
+            elif args.alg == 'MODVI':
+                dds = run_modvi(env, args, params)
+            else:
+                raise ValueError(f'Unknown algorithm {args.alg}')
 
-        print_dds(dds)
-        env_dir = os.path.join(args.log_dir, env_name, str(args.seed))
-        alg_dir = os.path.join(env_dir, args.alg)
-        save_momdp(env, env_dir, file_name=env_name)
-        save_dists(dds, alg_dir)
+            env_dir = os.path.join(args.log_dir, env_name, str(seed))
+            alg_dir = os.path.join(env_dir, args.alg)
+            save_momdp(env, env_dir, file_name=env_name)
+            save_dists(dds, alg_dir)
