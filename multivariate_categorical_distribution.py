@@ -41,6 +41,8 @@ class MultivariateCategoricalDistribution:
         self.thetas = self._init_thetas()
         self.dist = np.full(num_atoms, 1 / np.prod(num_atoms))  # Uniform distribution.
         self.cdf = self.get_cdf()
+        self.coordinates = np.array(np.meshgrid(*[np.arange(atoms) for atoms in self.num_atoms])).T.reshape(-1,
+                                                                                                            self.num_dims)
 
     @staticmethod
     def _get_min_theta_idx(val, thetas):
@@ -200,13 +202,18 @@ class MultivariateCategoricalDistribution:
         """Get the Jensen-Shannon distance between two distributions."""
         return scipy.spatial.distance.jensenshannon(self.dist.flatten(), other.dist.flatten())
 
-    def wasserstein_distance(self, other, lambd=1e-1):
+    def wasserstein_distance(self, other, lambd=1e-1, smoothing=1e-3):
         """Get the Wasserstein distance between two distributions."""
-        M = ot.dist(np.array(self.get_vecs()))
+        M = ot.dist(self.coordinates)
+        distribution1 = self.dist.flatten()
+        distribution2 = other.dist.flatten()
         if lambd > 0:
-            dist = ot.sinkhorn2(self.dist, other.dist, M, lambd)
+            for distribution in [distribution1, distribution2]:
+                distribution += smoothing
+                distribution /= np.sum(distribution)
+            dist = ot.sinkhorn2(distribution1, distribution2, M, lambd)
         else:
-            dist = ot.emd2(self.dist, other.dist, M)
+            dist = ot.emd2(distribution1, distribution2, M)
         return dist
 
     def spawn(self):
