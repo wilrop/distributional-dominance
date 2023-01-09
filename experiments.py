@@ -19,16 +19,16 @@ from utils import save_dists, save_momdp
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--log-dir', type=str, default='logs', help='The directory to save the logs.')
-    parser.add_argument("--seed", type=int, default=3, help="The seed for random number generation.")
-    parser.add_argument("--env", type=str, nargs='+', default=["small"], help="The environments to run experiments on.")
+    parser.add_argument("--seed", type=int, default=1, help="The seed for random number generation.")
+    parser.add_argument("--env", type=str, nargs='+', default=["small", "medium", "large"], help="The environments to run experiments on.")
     parser.add_argument("--augment-env", action='store_true', default=True, help="Whether to augment the environment.")
     parser.add_argument("--alg", type=str, default='DIMOQ', help="The algorithm to use.")
-    parser.add_argument("--num-episodes", type=int, default=1000, help="The number of episodes to run.")
+    parser.add_argument("--num-episodes", type=int, default=2000, help="The number of episodes to run.")
     parser.add_argument('--gamma', type=float, default=1., help='The discount factor.')
     parser.add_argument('--log', action='store_true', default=True, help='Whether to log the results.')
     parser.add_argument('--log-every', type=int, default=100, help='The number of episodes between logging.')
     parser.add_argument('--save', action='store_true', default=False, help='Whether to save the results.')
-    parser.add_argument('--warmup', type=int, default=20000, help='The number of warmup episodes.')
+    parser.add_argument('--warmup', type=int, default=50000, help='The number of warmup episodes.')
     args = parser.parse_args()
     return args
 
@@ -89,7 +89,7 @@ def space_traders_params():
     }
 
 
-def small_momdp_params():
+def random_momdp_params(size):
     return {
         'ref_point': np.array([0, 0]),
         'initial_epsilon': 1.0,
@@ -99,7 +99,7 @@ def small_momdp_params():
         'v_mins': (0., 0.),
         'v_maxs': (20., 20.),
         'project_name': "Distributional-Dominance",
-        'experiment_name': "DIMOQ-SmallMOMDP"
+        'experiment_name': f"DIMOQ-{size}MOMDP"
     }
 
 
@@ -107,15 +107,50 @@ def create_small_momdp(args):
     num_states = 5
     num_objectives = 2
     num_actions = 2
-    num_next_states = 2
+    min_next_states = 1
+    max_next_states = 2
     num_terminal_states = 1
     reward_min = np.zeros(num_objectives)
     reward_max = np.ones(num_objectives) * 5
     start_state = 0
     max_timesteps = 3
-    env = RandomMOMDP(num_states, num_objectives, num_actions, num_next_states, num_terminal_states, reward_min,
-                      reward_max, reward_dist='discrete', start_state=start_state, max_timesteps=max_timesteps,
-                      seed=args.seed, augment_state=args.augment_env)
+    env = RandomMOMDP(num_states, num_objectives, num_actions, min_next_states, max_next_states, num_terminal_states,
+                      reward_min, reward_max, reward_dist='discrete', start_state=start_state,
+                      max_timesteps=max_timesteps, seed=args.seed, augment_state=args.augment_env)
+    return env
+
+
+def create_medium_momdp(args):
+    num_states = 10
+    num_objectives = 2
+    num_actions = 3
+    min_next_states = 1
+    max_next_states = 2
+    num_terminal_states = 1
+    reward_min = np.zeros(num_objectives)
+    reward_max = np.ones(num_objectives) * 5
+    start_state = 0
+    max_timesteps = 5
+    env = RandomMOMDP(num_states, num_objectives, num_actions, min_next_states, max_next_states, num_terminal_states,
+                      reward_min, reward_max, reward_dist='discrete', start_state=start_state,
+                      max_timesteps=max_timesteps, seed=args.seed, augment_state=args.augment_env)
+    return env
+
+
+def create_large_momdp(args):
+    num_states = 20
+    num_objectives = 2
+    num_actions = 4
+    min_next_states = 1
+    max_next_states = 4
+    num_terminal_states = 2
+    reward_min = np.zeros(num_objectives)
+    reward_max = np.ones(num_objectives) * 5
+    start_state = 0
+    max_timesteps = 10
+    env = RandomMOMDP(num_states, num_objectives, num_actions, min_next_states, max_next_states, num_terminal_states,
+                      reward_min, reward_max, reward_dist='discrete', start_state=start_state,
+                      max_timesteps=max_timesteps, seed=args.seed, augment_state=args.augment_env)
     return env
 
 
@@ -133,7 +168,7 @@ def run_dimoq(env, args, params):
                   project_name=params['project_name'],
                   experiment_name=params['experiment_name'],
                   log=args.log)
-    dimoq.train(num_episodes=args.num_episodes, log_every=args.log_every)
+    dimoq.train(num_episodes=args.num_episodes, log_every=args.log_every, warmup_time=args.warmup)
     dds = dimoq.get_local_dds()
     return dds
 
@@ -160,7 +195,13 @@ if __name__ == "__main__":
             params = space_traders_params()
         elif "small" == env_name:
             env = create_small_momdp(args)
-            params = small_momdp_params()
+            params = random_momdp_params(env_name)
+        elif "medium" == env_name:
+            env = create_medium_momdp(args)
+            params = random_momdp_params(env_name)
+        elif "large" == env_name:
+            env = create_large_momdp(args)
+            params = random_momdp_params(env_name)
         else:
             raise ValueError(f'Unknown environment {args.env}')
 
@@ -172,7 +213,7 @@ if __name__ == "__main__":
             raise ValueError(f'Unknown algorithm {args.alg}')
 
         print_dds(dds)
-        env_dir = os.path.join(args.log_dir, env_name)
+        env_dir = os.path.join(args.log_dir, env_name, str(args.seed))
         alg_dir = os.path.join(env_dir, args.alg)
         save_momdp(env, env_dir, file_name=env_name)
         save_dists(dds, alg_dir)
