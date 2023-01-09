@@ -21,8 +21,5 @@ pip install --user scikit-learn
 pip install --user POT
 pip install --user pulp
 
-# Navigate to the job directory.
-cd $VSC_HOME/distributional-dominance
-
 # Run the experiments.
-python3 experiments.py --log-dir $VSC_SCRATCH/results --save --log-every 5000
+python3 $VSC_HOME/distributional-dominance/experiments.py --log-dir $VSC_SCRATCH/results --save --log-every 5000
