@@ -93,8 +93,8 @@ class MultivariateCategoricalDistribution:
         Returns:
             tuple: The index of the vector in the distribution.
         """
-        vec = self._cast_in_range(vec)
-        return tuple([round(val) for val in idx])
+        atom = self._cast_in_range(vec)
+        return tuple([round(val) for val in atom])
 
     def _idx_to_vec(self, idx):
         """Get the vector of the index in the distribution.
