@@ -6,6 +6,7 @@ from itertools import product
 import numpy as np
 import ot
 import scipy
+import math
 
 
 class MultivariateCategoricalDistribution:
@@ -64,7 +65,7 @@ class MultivariateCategoricalDistribution:
         Returns:
             np.ndarray: The clipped vector.
         """
-        return np.clip(vec, self.v_mins, self.v_maxs)
+        return [min(v_max, max(v_min, item)) for v_min, v_max, item in zip(self.v_mins, self.v_maxs, vec)]
 
     def _init_thetas(self):
         """Initialize the thetas for each dimension of the distribution.
@@ -79,6 +80,10 @@ class MultivariateCategoricalDistribution:
             thetas.append(dim_thetas)
         return thetas
 
+    def _cast_in_range(self, vec):
+        """Cast a vector in the atom range determined by the minimum and maximum vectors."""
+        return [item - v_min / gap for item, v_min, gap in zip(vec, self.v_mins, self.gaps)]
+
     def _vec_to_idx(self, vec):
         """Get the index of the vector in the distribution.
 
@@ -88,7 +93,7 @@ class MultivariateCategoricalDistribution:
         Returns:
             tuple: The index of the vector in the distribution.
         """
-        idx = (vec - self.v_mins) / self.gaps
+        vec = self._cast_in_range(vec)
         return tuple([round(val) for val in idx])
 
     def _idx_to_vec(self, idx):
@@ -222,26 +227,23 @@ class MultivariateCategoricalDistribution:
             return [(self._idx_to_vec(self._vec_to_idx(vec)), 1.)]
         elif method == 'deterministic':
             vec = self._clip_vec(vec)
-            min_indices = [self._get_min_theta_idx(vec[idx], self.thetas[idx]) for idx in range(self.num_dims)]
-            min_sups = np.array([self.thetas[dim][idx] for dim, idx in enumerate(min_indices)])
-            max_sups = np.array([self.thetas[dim][idx + 1] for dim, idx in enumerate(min_indices)])
-            zetas = (vec - min_sups) / (max_sups - min_sups)
+            b = self._cast_in_range(vec)
+            lower = []
+            upper = []
+            lower_ratios = []
+            upper_ratios = []
 
-            edges = []
-
-            for min_sup, max_sup, zeta in zip(min_sups, max_sups, zetas):
-                dim_edges = [(min_sup, 1 - zeta), (max_sup, zeta)]
-                edges.append(dim_edges)
+            for coord in b:
+                low = math.floor(coord)
+                up = math.ceil(coord)
+                lower.append(low)
+                upper.append(up)
+                lower_ratios.append(up - coord)
+                upper_ratios.append(coord - low)
 
             delta_vecs_probs = []
-            for edge in product(*edges):
-                delta_vec = []
-                delta_prob = 1
-                for point, point_prob in edge:
-                    delta_vec.append(point)
-                    delta_prob *= point_prob
-
-                delta_vecs_probs.append((np.array(delta_vec), delta_prob))
+            for points, probs in zip(product(*zip(lower, upper)), product(*zip(lower_ratios, upper_ratios))):
+                delta_vecs_probs.append((np.array(points), math.prod(probs)))
             return delta_vecs_probs
         else:
             raise ValueError('Invalid projection method.')
