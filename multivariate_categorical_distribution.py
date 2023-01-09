@@ -200,10 +200,13 @@ class MultivariateCategoricalDistribution:
         """Get the Jensen-Shannon distance between two distributions."""
         return scipy.spatial.distance.jensenshannon(self.dist.flatten(), other.dist.flatten())
 
-    def wasserstein_distance(self, other):
+    def wasserstein_distance(self, other, lambd=1e-1):
         """Get the Wasserstein distance between two distributions."""
-        M = ot.dist(self.dist, other.dist)
-        dist = ot.emd2(self.dist, other.dist, M)
+        M = ot.dist(np.array(self.get_vecs()))
+        if lambd > 0:
+            dist = ot.sinkhorn2(self.dist, other.dist, M, lambd)
+        else:
+            dist = ot.emd2(self.dist, other.dist, M)
         return dist
 
     def spawn(self):
