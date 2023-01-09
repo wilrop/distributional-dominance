@@ -41,7 +41,7 @@ def linear_utility(dist_lst):
     return sum(sum(dist.expected_value()) for dist in dist_lst)
 
 
-def compute_distance_matrix(distributions, distance_metric='wasserstein'):
+def compute_distance_matrix(distributions, distance_metric='jensen-shannon'):
     """Compute the Jensen-Shannon distances of a list of distributions.
 
     Args:
@@ -54,7 +54,7 @@ def compute_distance_matrix(distributions, distance_metric='wasserstein'):
     for i, dist1 in enumerate(distributions):
         for j, dist2 in zip(range(i + 1, len(distributions)), distributions[i + 1:]):
             if distance_metric == 'wasserstein':
-                distance = dist1.wasserstein(dist2)
+                distance = dist1.wasserstein_distance(dist2)
             elif distance_metric == 'jensen-shannon':
                 distance = dist1.js_distance(dist2)
             else:
