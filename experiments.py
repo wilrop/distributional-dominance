@@ -225,6 +225,7 @@ if __name__ == "__main__":
                 raise ValueError(f'Unknown algorithm {args.alg}')
 
             if args.save:
+                print(f'Saving {args.alg} results for {env_name} to {args.save_dir}')
                 env_dir = os.path.join(args.log_dir, env_name, str(seed))
                 alg_dir = os.path.join(env_dir, args.alg)
                 save_momdp(env, env_dir, file_name=env_name)
