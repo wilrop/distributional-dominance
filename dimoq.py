@@ -25,7 +25,7 @@ class DIMOQ:
             num_atoms: tuple = (51, 51),
             v_mins: tuple = (0., 0.),
             v_maxs: tuple = (1., 1.),
-            max_dists: int = 10,
+            max_dists: int = 20,
             seed: int = None,
             project_name: str = "MORL-baselines",
             experiment_name: str = "Pareto Q-Learning",
@@ -284,7 +284,7 @@ class DIMOQ:
                 next_state = self._flatten_state(next_state)
 
                 new_nd = self.calc_non_dominated(next_state)
-                self.non_dominated[state][action][next_state] = get_best(new_nd, max_dists=self.max_dists)
+                self.non_dominated[state][action][next_state] = get_best(new_nd, max_dists=self.max_dists, rng=self.rng)
                 self.reward_dists[state][action][next_state].update(reward)
                 if learn_model:
                     self.transitions[state, action, next_state] += 1
@@ -293,12 +293,12 @@ class DIMOQ:
             self.epsilon = max(self.final_epsilon, self.epsilon * self.epsilon_decay)
 
             if episode % log_every == 0:
-                dds = self.get_local_dds(state=0)
+                dds = self.get_local_dds(state=0, keep_best=False)
                 print(f'Size of the DDS: {len(dds)}')
 
         return self.get_local_dds(state=0)
 
-    def get_local_dds(self, state=0):
+    def get_local_dds(self, state=0, keep_best=False):
         """Collect the local DCS in a given state.
 
         Args:
@@ -309,4 +309,8 @@ class DIMOQ:
         """
         q_dists = [self.get_q_dists(state, action) for action in range(self.num_actions)]
         candidates = [q_dist for q_dist_list in q_dists for q_dist in q_dist_list]
-        return get_best(dd_prune(candidates), max_dists=self.max_dists)
+        dds = dd_prune(candidates)
+        if keep_best:
+            return get_best(dds, max_dists=self.max_dists, rng=self.rng)
+        else:
+            return dds
