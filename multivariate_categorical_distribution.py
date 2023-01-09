@@ -82,7 +82,7 @@ class MultivariateCategoricalDistribution:
 
     def _cast_in_range(self, vec):
         """Cast a vector in the atom range determined by the minimum and maximum vectors."""
-        return [item - v_min / gap for item, v_min, gap in zip(vec, self.v_mins, self.gaps)]
+        return [(item - v_min) / gap for item, v_min, gap in zip(vec, self.v_mins, self.gaps)]
 
     def _vec_to_idx(self, vec):
         """Get the index of the vector in the distribution.
@@ -260,7 +260,7 @@ class MultivariateCategoricalDistribution:
         vec_probs = defaultdict(lambda: 0)
 
         for vec1, prob1 in self.nonzero_vecs_probs():
-            for vec2, prob2 in other.nonzero_probs():
+            for vec2, prob2 in other.nonzero_vecs_probs():
                 vec = self._clip_vec(vec1 + vec2)
                 vec_probs[tuple(vec)] += prob1 * prob2
 
@@ -281,7 +281,7 @@ class MultivariateCategoricalDistribution:
         probs = []
         for vec, prob in self.nonzero_vecs_probs():
             vecs.append(np.array(vec) * scalar)
-            probs.append(probs)
+            probs.append(prob)
 
         new_dist = MultivariateCategoricalDistribution(self.num_atoms, self.v_mins, self.v_maxs)
         new_dist.static_update(vecs, probs)
