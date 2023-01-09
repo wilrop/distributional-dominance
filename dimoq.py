@@ -1,12 +1,13 @@
+from itertools import product
+
 import numpy as np
 from gym.spaces import Box
-from itertools import product
+
 from count_based_mcd import CountBasedMCD
 from dist_dom import dd_prune
 from dist_metrics import dist_hypervolume, get_best, max_inter_distance, linear_utility
 from multivariate_categorical_distribution import MultivariateCategoricalDistribution
-from utils import zero_init
-from utils import create_mixture_distribution
+from utils import create_mixture_distribution, zero_init
 
 
 class DIMOQ:
