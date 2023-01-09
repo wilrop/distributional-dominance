@@ -1,4 +1,5 @@
 import json
+import math
 import os
 from collections import defaultdict
 from itertools import product
@@ -6,7 +7,6 @@ from itertools import product
 import numpy as np
 import ot
 import scipy
-import math
 
 
 class MultivariateCategoricalDistribution:
