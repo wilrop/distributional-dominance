@@ -1,6 +1,6 @@
 import numpy as np
 from pymoo.indicators.hv import HV
-from sklearn.cluster import DBSCAN
+from sklearn.cluster import AgglomerativeClustering
 
 
 def dist_hypervolume(ref_point, dists):
@@ -26,8 +26,7 @@ def max_inter_distance(dist_lst):
     Returns:
         float: The maximum distance.
     """
-    dist_matrix = js_distances(dist_lst)
-    return np.max(dist_matrix)
+    return np.max(compute_distance_matrix(dist_lst))
 
 
 def linear_utility(dist_lst):
@@ -42,7 +41,7 @@ def linear_utility(dist_lst):
     return sum(sum(dist.expected_value()) for dist in dist_lst)
 
 
-def js_distances(dists):
+def compute_distance_matrix(distributions, distance_metric='wasserstein'):
     """Compute the Jensen-Shannon distances of a list of distributions.
 
     Args:
@@ -51,17 +50,22 @@ def js_distances(dists):
     Returns:
         ndarray: A matrix of distances. Conceptually this is a graph where each node is a distribution.
     """
-    distance_matrix = np.zeros((len(dists), len(dists)))
-    for i, dist1 in enumerate(dists):
-        for j, dist2 in zip(range(i + 1, len(dists)), dists[i + 1:]):
-            distance = dist1.js_distance(dist2)
+    distance_matrix = np.zeros((len(distributions), len(distributions)))
+    for i, dist1 in enumerate(distributions):
+        for j, dist2 in zip(range(i + 1, len(distributions)), distributions[i + 1:]):
+            if distance_metric == 'wasserstein':
+                distance = dist1.wasserstein(dist2)
+            elif distance_metric == 'jensen-shannon':
+                distance = dist1.js_distance(dist2)
+            else:
+                raise Exception('Distance metric not implemented')
             distance_matrix[i, j] = distance
             distance_matrix[j, i] = distance
 
     return distance_matrix
 
 
-def get_best(dist_lst, max_dists=10):
+def get_best(dist_lst, max_dists=10, rng=None):
     """Get the best distributions from a list of distributions.
 
     Args:
@@ -71,28 +75,19 @@ def get_best(dist_lst, max_dists=10):
     Returns:
         List[MultivariateCategoricalDistribution]: The best distributions.
     """
-    l_eps = 0.
-    r_eps = 1.
-    min_samples = 5
+    if len(dist_lst) <= max_dists:
+        return dist_lst
 
-    dist_matrix = js_distances(dist_lst)
-
-    while len(dist_lst) > max_dists:
-        eps = (l_eps + r_eps) / 2
-        clustering = DBSCAN(eps=eps, min_samples=min_samples, metric="precomputed", n_jobs=-1)
-        clustering.fit(dist_matrix)
-
-        cores = clustering.core_sample_indices_
-        outliers = np.squeeze(np.argwhere(clustering.labels_ == -1))
-
-        if len(outliers) > 0:
-            l_eps = eps
-        elif len(cores) == len(dist_lst):
-            r_eps = eps
+    rng = rng if rng is not None else np.random.default_rng()
+    dist_matrix = compute_distance_matrix(dist_lst)
+    clustering = AgglomerativeClustering(n_clusters=max_dists, metric='precomputed', linkage='average')
+    clustering.fit(dist_matrix)
+    keep = []
+    for cluster in range(max_dists):
+        cluster_nodes = np.flatnonzero(clustering.labels_ == cluster)
+        if len(cluster_nodes) == 1:
+            keep.append(cluster_nodes[0])
         else:
-            l_eps = 0.
-            r_eps = 1.
-            dist_lst = [dist_lst[i] for i in cores]
-            dist_matrix = js_distances(dist_lst)
+            keep.append(rng.choice(cluster_nodes))
 
-    return dist_lst
+    return [dist_lst[i] for i in keep]
