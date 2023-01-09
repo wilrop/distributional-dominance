@@ -21,5 +21,8 @@ pip install --user scikit-learn
 pip install --user POT
 pip install --user pulp
 
+# Define the log directory.
+LOGDIR="${VSC_SCRATCH}/results"
+
 # Run the experiments.
-python3 $VSC_HOME/distributional-dominance/experiments.py --log-dir $VSC_SCRATCH/results --save --log-every 5000
+python3 $VSC_HOME/distributional-dominance/experiments.py --log-dir "$LOGDIR" --save --log-every 5000
