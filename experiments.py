@@ -29,7 +29,7 @@ def parse_args():
     parser.add_argument('--gamma', type=float, default=1., help='The discount factor.')
     parser.add_argument('--log', action='store_true', default=True, help='Whether to log the results.')
     parser.add_argument('--log-every', type=int, default=100, help='The number of episodes between logging.')
-    parser.add_argument('--save', action='store_true', default=False, help='Whether to save the results.')
+    parser.add_argument('--save', action='store_true', default=True, help='Whether to save the results.')
     parser.add_argument('--warmup', type=int, default=50000, help='The number of warmup episodes.')
     args = parser.parse_args()
     return args
@@ -224,7 +224,8 @@ if __name__ == "__main__":
             else:
                 raise ValueError(f'Unknown algorithm {args.alg}')
 
-            env_dir = os.path.join(args.log_dir, env_name, str(seed))
-            alg_dir = os.path.join(env_dir, args.alg)
-            save_momdp(env, env_dir, file_name=env_name)
-            save_dists(dds, alg_dir)
+            if args.save:
+                env_dir = os.path.join(args.log_dir, env_name, str(seed))
+                alg_dir = os.path.join(env_dir, args.alg)
+                save_momdp(env, env_dir, file_name=env_name)
+                save_dists(dds, alg_dir)
