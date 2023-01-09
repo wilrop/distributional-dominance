@@ -4,13 +4,14 @@ from collections import defaultdict
 from itertools import product
 
 import numpy as np
+import ot
 import scipy
 
 
 class MultivariateCategoricalDistribution:
     """A class to represent a multivariate categorical distribution."""
 
-    def __init__(self, num_atoms, v_mins, v_maxs, decimals=4, name=None):
+    def __init__(self, num_atoms, v_mins, v_maxs, decimals=3, name=None):
         # Check if the num atoms is a number and if so wrap it in a list and numpy array.
         if isinstance(num_atoms, (int, float, np.number)):
             num_atoms = np.array([num_atoms])
@@ -78,10 +79,6 @@ class MultivariateCategoricalDistribution:
             thetas.append(dim_thetas)
         return thetas
 
-    def _get_vecs(self):
-        """Get the vectors of the distribution."""
-        return [np.array(vec) for vec in product(*[dim_thetas[:-1] for dim_thetas in self.thetas])]
-
     def _vec_to_idx(self, vec):
         """Get the index of the vector in the distribution.
 
@@ -104,6 +101,10 @@ class MultivariateCategoricalDistribution:
             np.ndarray: The vector of the index in the distribution.
         """
         return np.array([dim_thetas[i] for i, dim_thetas in zip(idx, self.thetas)])
+
+    def get_vecs(self):
+        """Get the vectors of the distribution."""
+        return [np.array(vec) for vec in product(*[dim_thetas[:-1] for dim_thetas in self.thetas])]
 
     def dist_categories(self):
         """Get the categories of the distribution."""
@@ -194,8 +195,14 @@ class MultivariateCategoricalDistribution:
         """Get the Jensen-Shannon distance between two distributions."""
         return scipy.spatial.distance.jensenshannon(self.dist.flatten(), other.dist.flatten())
 
+    def wasserstein_distance(self, other):
+        """Get the Wasserstein distance between two distributions."""
+        M = ot.dist(self.dist, other.dist)
+        dist = ot.emd2(self.dist, other.dist, M)
+        return dist
+
     def spawn(self):
-        """Spawn a new distribution."""
+        """Spawn a new distribution with the same parameters."""
         return MultivariateCategoricalDistribution(self.num_atoms, self.v_mins, self.v_maxs)
 
     def project_vec(self, vec, method='nearest'):
@@ -203,8 +210,8 @@ class MultivariateCategoricalDistribution:
 
         Args:
             vec (np.ndarray): The vector to project onto the distribution.
-            method (str, optional): What kind of projection to use for the vector. By default the vector is assumed to
-                be directly indexable in the distribution.
+            method (str, optional): What kind of projection to use for the vector. By default the vector is projected
+                to the nearest bin.
 
         Returns:
             list: A list of tuples of the projected vector and the probability of the vector.
@@ -250,10 +257,10 @@ class MultivariateCategoricalDistribution:
         """
         vec_probs = defaultdict(lambda: 0)
 
-        for vec1 in self.nonzero_vecs():
-            for vec2 in other.nonzero_vecs():
+        for vec1, prob1 in self.nonzero_vecs_probs():
+            for vec2, prob2 in other.nonzero_probs():
                 vec = self._clip_vec(vec1 + vec2)
-                vec_probs[tuple(vec)] += self.p(vec1) * other.p(vec2)
+                vec_probs[tuple(vec)] += prob1 * prob2
 
         new_dist = MultivariateCategoricalDistribution(self.num_atoms, self.v_mins, self.v_maxs)
         new_dist.static_update(list(vec_probs.keys()), list(vec_probs.values()))
@@ -268,9 +275,12 @@ class MultivariateCategoricalDistribution:
         Returns:
             Distribution: The distribution multiplied by the scalar.
         """
-        vecs = self.nonzero_vecs()
-        probs = [self.p(vec) for vec in vecs]
-        vecs = list(np.array(vecs) * scalar)
+        vecs = []
+        probs = []
+        for vec, prob in self.nonzero_vecs_probs():
+            vecs.append(np.array(vec) * scalar)
+            probs.append(probs)
+
         new_dist = MultivariateCategoricalDistribution(self.num_atoms, self.v_mins, self.v_maxs)
         new_dist.static_update(vecs, probs)
         return new_dist
@@ -291,7 +301,8 @@ class MultivariateCategoricalDistribution:
             'num_atoms': self.num_atoms.tolist(),
             'v_mins': self.v_mins.tolist(),
             'v_maxs': self.v_maxs.tolist(),
-            'name': self.name
+            'decimals': self.decimals,
+            'name': self.name,
         }
 
     def save(self, dir_path, file_name=None):
