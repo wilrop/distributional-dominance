@@ -148,7 +148,7 @@ class MCD:
 
     def get_cdf(self):
         """Compute the cumulative distribution function of the distribution."""
-        cdf = np.copy(self.dist)
+        cdf = self.dist
         for i in range(self.num_dims):
             cdf = np.cumsum(cdf, axis=i)
         return cdf
