@@ -65,7 +65,7 @@ class DIMOQ:
         self.num_objectives = self.env.reward_space.shape[0]
         self.non_dominated = self._init_zero_dists(MCD, squeeze=False)
         self.reward_dists = self._init_zero_dists(CountBasedMCD, squeeze=True)
-        self.transitions = np.zeros((self.num_states, self.num_actions, self.num_states))
+        self.transitions = np.zeros((self.num_states, self.num_actions, self.num_states), dtype=np.int32)
 
         # Logging
         self.project_name = project_name
