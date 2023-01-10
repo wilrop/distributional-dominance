@@ -65,7 +65,7 @@ def compute_distance_matrix(distributions, distance_metric='wasserstein'):
     return distance_matrix
 
 
-def get_best(dist_lst, max_dists=10, rng=None):
+def get_best(dist_lst, distance_metric='jensen-shannon', max_dists=10, rng=None):
     """Get the best distributions from a list of distributions.
 
     Args:
@@ -79,8 +79,8 @@ def get_best(dist_lst, max_dists=10, rng=None):
         return dist_lst
 
     rng = rng if rng is not None else np.random.default_rng()
-    dist_matrix = compute_distance_matrix(dist_lst)
-    clustering = AgglomerativeClustering(n_clusters=max_dists, affinity='precomputed', linkage='average')
+    dist_matrix = compute_distance_matrix(dist_lst, distance_metric=distance_metric)
+    clustering = AgglomerativeClustering(n_clusters=max_dists, metric='precomputed', linkage='average')
     clustering.fit(dist_matrix)
     keep = []
     for cluster in range(max_dists):
