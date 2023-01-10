@@ -95,11 +95,11 @@ def space_traders_params():
 
 def random_momdp_params(size):
     if size == 'small':
-        max_dists = 15
+        max_dists = 10
     elif size == 'medium':
-        max_dists = 30
+        max_dists = 15
     elif size == 'large':
-        max_dists = 45
+        max_dists = 20
     else:
         raise ValueError(f'Invalid size: {size}')
     return {
