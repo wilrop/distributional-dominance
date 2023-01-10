@@ -1,5 +1,6 @@
 import argparse
 import os
+import time
 from copy import deepcopy
 
 import mo_gym
@@ -13,7 +14,7 @@ from dist_dom import dd_prune
 from modvi import MODVI
 from random_momdp import RandomMOMDP
 from space_traders import SpaceTraders
-from utils import save_dists, save_momdp
+from utils import save_dists, save_momdp, save_alg
 
 
 def parse_args():
@@ -166,6 +167,7 @@ def create_large_momdp(args, seed):
 
 
 def run_dimoq(env, args, params, seed):
+    print(f'Running DIMOQ')
     dimoq = DIMOQ(env,
                   params['ref_point'],
                   args.gamma,
@@ -181,23 +183,26 @@ def run_dimoq(env, args, params, seed):
                   log=args.log)
     dimoq.train(num_episodes=args.num_episodes, log_every=args.log_every, warmup_time=args.warmup)
     dds = dimoq.get_local_dds()
-    return dds
+    return dimoq, dds
 
 
 def run_modvi(env, args, params):
+    print(f'Running MODVI')
     modvi = MODVI(env,
                   args.gamma,
                   params['num_atoms'],
                   params['v_mins'],
                   params['v_maxs'])
     dds = modvi.get_dds(num_iters=args.num_episodes)
-    return dds
+    return modvi, dds
 
 
 if __name__ == "__main__":
     args = parse_args()
 
     for env_name in args.env:
+        print(f'Running on {env_name}')
+
         for seed in args.seed:
             if "dst" == env_name:
                 env = mo_gym.make('deep-sea-treasure-v0', dst_map=CONCAVE_MAP)
@@ -217,16 +222,21 @@ if __name__ == "__main__":
             else:
                 raise ValueError(f'Unknown environment {args.env}')
 
+            start = time.time()
             if args.alg == 'DIMOQ':
-                dds = run_dimoq(env, args, params, seed)
+                alg, dds = run_dimoq(env, args, params, seed)
             elif args.alg == 'MODVI':
-                dds = run_modvi(env, args, params)
+                alg, dds = run_modvi(env, args, params)
             else:
                 raise ValueError(f'Unknown algorithm {args.alg}')
+            end = time.time()
+            duration = end - start
+            print(f'Finished in {duration} seconds')
 
             if args.save:
                 print(f'Saving {args.alg} results for {env_name} to {args.log_dir}')
                 env_dir = os.path.join(args.log_dir, env_name, str(seed))
                 alg_dir = os.path.join(env_dir, args.alg)
-                save_momdp(env, env_dir, file_name=env_name)
+                save_momdp(env, env_dir, env_name)
+                save_alg(alg, len(dds), duration, alg_dir, args.alg)
                 save_dists(dds, alg_dir)
