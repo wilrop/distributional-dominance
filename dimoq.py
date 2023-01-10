@@ -1,4 +1,5 @@
 from itertools import product
+from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 from gym.spaces import Box
@@ -31,6 +32,7 @@ class DIMOQ:
             project_name: str = "MORL-baselines",
             experiment_name: str = "Pareto Q-Learning",
             log: bool = True,
+            num_threads: int = 1,
     ):
         # Learning parameters
         self.gamma = gamma
@@ -47,6 +49,7 @@ class DIMOQ:
         self.v_mins = v_mins
         self.v_maxs = v_maxs
         self.max_dists = max_dists
+        self.num_threads = num_threads
 
         # Internal Q-learning variables
         self.env = env
@@ -103,10 +106,11 @@ class DIMOQ:
             "v_mins": list(self.v_mins),
             "v_maxs": list(self.v_maxs),
             "max_dists": self.max_dists,
-            "seed": self.seed
+            "num_threads": self.num_threads,
+            "seed": self.seed,
         }
 
-    def score_hypervolume(self, state):
+    def score_hypervolume(self, state, pool):
         """Compute the action scores based upon the hypervolume metric for the expected values.
 
         Args:
@@ -115,11 +119,11 @@ class DIMOQ:
         Returns:
             ndarray: A score per action.
         """
-        q_dists_lst = [self.get_q_dists(state, action) for action in range(self.num_actions)]
+        q_dists_lst = self.get_q_dists_lst(state, pool)
         action_scores = [dist_hypervolume(self.ref_point, q_dists) for q_dists in q_dists_lst]
         return action_scores
 
-    def score_inter_distance(self, state):
+    def score_inter_distance(self, state, pool):
         """Compute the action scores based upon the maximum inter-distribution distance metric.
 
         Args:
@@ -128,11 +132,11 @@ class DIMOQ:
         Returns:
             ndarray: A score per action.
         """
-        q_dists_lst = [self.get_q_dists(state, action) for action in range(self.num_actions)]
+        q_dists_lst = self.get_q_dists_lst(state, pool)
         action_scores = [max_inter_distance(q_dists) for q_dists in q_dists_lst]
         return action_scores
 
-    def score_linear_utility(self, state):
+    def score_linear_utility(self, state, pool):
         """Compute the action scores based upon the linear utility metric.
 
         Args:
@@ -141,9 +145,15 @@ class DIMOQ:
         Returns:
             ndarray: A score per action.
         """
-        q_dists_lst = [self.get_q_dists(state, action) for action in range(self.num_actions)]
+        q_dists_lst = self.get_q_dists_lst(state, pool)
         action_scores = [linear_utility(q_dists) for q_dists in q_dists_lst]
         return action_scores
+
+    def get_q_dists_lst(self, state, pool):
+        if pool is None:
+            return [self.get_q_dists(state, action) for action in range(self.num_actions)]
+        else:
+            return list(pool.map(self.get_q_dists, [state] * self.num_actions, range(self.num_actions)))
 
     def get_q_dists(self, state, action):
         """Compute the distributional Q-set for a given state-action pair.
@@ -184,7 +194,7 @@ class DIMOQ:
 
         return q_dists
 
-    def select_action(self, state, score_func):
+    def select_action(self, state, score_func, pool=None):
         """Select an action in the current state.
 
         Args:
@@ -197,10 +207,10 @@ class DIMOQ:
         if self.rng.uniform(0, 1) < self.epsilon:
             return self.rng.integers(self.num_actions)
         else:
-            action_scores = score_func(state)
+            action_scores = score_func(state, pool)
             return self.rng.choice(np.argwhere(action_scores == np.max(action_scores)).flatten())
 
-    def calc_non_dominated(self, state):
+    def calc_non_dominated(self, state, pool):
         """Get the distributionally non-dominated distributions in a given state.
 
         Args:
@@ -209,7 +219,7 @@ class DIMOQ:
         Returns:
             Set: A set of Pareto non-dominated vectors.
         """
-        q_dists_lst = [self.get_q_dists(state, action) for action in range(self.num_actions)]
+        q_dists_lst = self.get_q_dists_lst(state, pool)
         q_dists = [q_dist for q_dists in q_dists_lst for q_dist in q_dists]
         non_dominated = dd_prune(q_dists)
         return non_dominated
@@ -235,6 +245,9 @@ class DIMOQ:
             num_episodes (int): The number of episodes to run.
         """
         print(f'Warming up for {num_episodes} episodes...')
+        start_epsilon = self.epsilon
+        self.epsilon = 1
+
         for _ in range(num_episodes):
             state, _ = self.env.reset()
             state = self._flatten_state(state)
@@ -247,6 +260,20 @@ class DIMOQ:
                 next_state = self._flatten_state(next_state)
                 self.transitions[state, action, next_state] += 1
                 state = next_state
+
+        self.epsilon = start_epsilon
+
+    def make_pool(self):
+        if self.num_threads > 1:
+            return ThreadPoolExecutor(max_workers=self.num_threads)
+        if self.num_threads < 0 or self.num_threads is None:
+            return ThreadPoolExecutor(max_workers=None)
+        else:
+            return None
+
+    def close_pool(self, pool):
+        if pool is not None:
+            pool.shutdown()
 
     def train(self, num_episodes=3000, warmup_time=1000, learn_model=False, log_every=100, action_eval='linear'):
         """Learn the distributional dominance set.
@@ -271,6 +298,8 @@ class DIMOQ:
         if warmup_time is not None:
             self.warmup(warmup_time, score_func)
 
+        pool = self.make_pool()
+
         for episode in range(num_episodes):
             if episode % log_every == 0:
                 print(f'Training episode {episode}')
@@ -281,11 +310,11 @@ class DIMOQ:
             truncated = False
 
             while not (terminated or truncated):
-                action = self.select_action(state, score_func)
+                action = self.select_action(state, score_func, pool)
                 next_state, reward, terminated, truncated, _ = self.env.step(action)
                 next_state = self._flatten_state(next_state)
 
-                new_nd = self.calc_non_dominated(next_state)
+                new_nd = self.calc_non_dominated(next_state, pool)
                 self.non_dominated[state][action][next_state] = get_best(new_nd, max_dists=self.max_dists, rng=self.rng)
                 self.reward_dists[state][action][next_state].update(reward)
                 if learn_model:
@@ -295,12 +324,15 @@ class DIMOQ:
             self.epsilon = max(self.final_epsilon, self.epsilon * self.epsilon_decay)
 
             if episode % log_every == 0:
-                dds = self.get_local_dds(state=0, keep_best=False)
+                dds = self.get_local_dds(pool, state=0, keep_best=False)
                 print(f'Size of the DDS: {len(dds)}')
 
-        return self.get_local_dds(state=0)
+        final_dds = self.get_local_dds(pool, state=0)
 
-    def get_local_dds(self, state=0, keep_best=False):
+        self.close_pool(pool)
+        return final_dds
+
+    def get_local_dds(self, pool=None, state=0, keep_best=False):
         """Collect the local DCS in a given state.
 
         Args:
@@ -309,7 +341,7 @@ class DIMOQ:
         Returns:
             Set: A set of distributional optimal vectors.
         """
-        q_dists = [self.get_q_dists(state, action) for action in range(self.num_actions)]
+        q_dists = self.get_q_dists_lst(state, pool)
         candidates = [q_dist for q_dist_list in q_dists for q_dist in q_dist_list]
         dds = dd_prune(candidates)
         if keep_best:
