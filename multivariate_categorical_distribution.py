@@ -189,12 +189,12 @@ class MCD:
         Returns:
             Distribution: The marginal distribution of the given dimension.
         """
-        marginal_dist = MCD(self.num_atoms[dim], self.v_mins[dim], self.v_maxs[dim])
         vecs = self.thetas[dim][:-1].reshape(-1, 1)
         probs = np.zeros(len(vecs))
         for idx in np.ndindex(*self.num_atoms):
             marginal_idx = idx[dim]
             probs[marginal_idx] += self.dist[idx]
+        marginal_dist = MCD(self.num_atoms[dim], self.v_mins[dim], self.v_maxs[dim])
         marginal_dist.static_update(vecs, probs)
         return marginal_dist
 
