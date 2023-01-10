@@ -9,7 +9,7 @@ import ot
 import scipy
 
 
-class MultivariateCategoricalDistribution:
+class MCD:
     """A class to represent a multivariate categorical distribution."""
 
     def __init__(self, num_atoms, v_mins, v_maxs, decimals=3, name=None):
@@ -189,7 +189,7 @@ class MultivariateCategoricalDistribution:
         Returns:
             Distribution: The marginal distribution of the given dimension.
         """
-        marginal_dist = MultivariateCategoricalDistribution(self.num_atoms[dim], self.v_mins[dim], self.v_maxs[dim])
+        marginal_dist = MCD(self.num_atoms[dim], self.v_mins[dim], self.v_maxs[dim])
         vecs = self.thetas[dim][:-1].reshape(-1, 1)
         probs = np.zeros(len(vecs))
         for idx in np.ndindex(*self.num_atoms):
@@ -218,7 +218,7 @@ class MultivariateCategoricalDistribution:
 
     def spawn(self):
         """Spawn a new distribution with the same parameters."""
-        return MultivariateCategoricalDistribution(self.num_atoms, self.v_mins, self.v_maxs)
+        return MCD(self.num_atoms, self.v_mins, self.v_maxs)
 
     def project_vec(self, vec, method='nearest'):
         """Project a vector onto the distribution.
@@ -274,7 +274,7 @@ class MultivariateCategoricalDistribution:
                 vec = self._clip_vec(vec1 + vec2)
                 vec_probs[tuple(vec)] += prob1 * prob2
 
-        new_dist = MultivariateCategoricalDistribution(self.num_atoms, self.v_mins, self.v_maxs)
+        new_dist = MCD(self.num_atoms, self.v_mins, self.v_maxs)
         new_dist.static_update(list(vec_probs.keys()), list(vec_probs.values()))
         return new_dist
 
@@ -290,10 +290,10 @@ class MultivariateCategoricalDistribution:
         vecs = []
         probs = []
         for vec, prob in self.nonzero_vecs_probs():
-            vecs.append(np.array(vec) * scalar)
+            vecs.append(self._clip_vec(np.array(vec) * scalar))
             probs.append(prob)
 
-        new_dist = MultivariateCategoricalDistribution(self.num_atoms, self.v_mins, self.v_maxs)
+        new_dist = MCD(self.num_atoms, self.v_mins, self.v_maxs)
         new_dist.static_update(vecs, probs)
         return new_dist
 
