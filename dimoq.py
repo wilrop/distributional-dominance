@@ -94,7 +94,7 @@ class DIMOQ:
             Dict: A dictionary of parameters and values.
         """
         return {
-            "ref_point": list(self.ref_point),
+            "ref_point": self.ref_point.tolist(),
             "gamma": self.gamma,
             "initial_epsilon": self.initial_epsilon,
             "epsilon_decay": self.epsilon_decay,
@@ -102,6 +102,7 @@ class DIMOQ:
             "num_atoms": list(self.num_atoms),
             "v_mins": list(self.v_mins),
             "v_maxs": list(self.v_maxs),
+            "max_dists": self.max_dists,
             "seed": self.seed
         }
 
