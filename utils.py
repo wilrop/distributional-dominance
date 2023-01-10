@@ -115,3 +115,14 @@ def save_momdp(momdp, dir_path, file_name):
     config = momdp.get_config()
     with open(os.path.join(dir_path, file_name), 'w') as f:
         json.dump(config, f)
+
+
+def save_alg(alg, dds_size, duration, dir_path, file_name):
+    os.makedirs(dir_path, exist_ok=True)
+    file_name += '.json'
+    config = alg.get_config()
+    config['dds_size'] = dds_size
+    config['duration'] = duration
+
+    with open(os.path.join(dir_path, file_name), 'w') as f:
+        json.dump(config, f)
