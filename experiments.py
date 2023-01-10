@@ -20,14 +20,15 @@ from utils import save_dists, save_momdp, save_alg
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--log-dir', type=str, default='logs', help='The directory to save the logs.')
-    parser.add_argument("--seed", type=int, nargs='+', default=[1, 2, 3, 4, 5],
+    parser.add_argument("--seed", type=int, nargs='+', default=[1],
                         help="The seed for random number generation.")
-    parser.add_argument("--env", type=str, nargs='+', default=["small", "medium", "large"],
+    parser.add_argument("--env", type=str, nargs='+', default=["medium"],
                         help="The environments to run experiments on.")
     parser.add_argument("--augment-env", action='store_true', default=True, help="Whether to augment the environment.")
     parser.add_argument("--alg", type=str, default='DIMOQ', help="The algorithm to use.")
-    parser.add_argument("--num-episodes", type=int, default=2000, help="The number of episodes to run.")
+    parser.add_argument("--num-episodes", type=int, default=500, help="The number of episodes to run.")
     parser.add_argument('--gamma', type=float, default=1., help='The discount factor.')
+    parser.add_argument('--num-threads', type=int, default=1, help='The number of threads to use.')
     parser.add_argument('--log', action='store_true', default=True, help='Whether to log the results.')
     parser.add_argument('--log-every', type=int, default=100, help='The number of episodes between logging.')
     parser.add_argument('--save', action='store_true', default=True, help='Whether to save the results.')
@@ -180,9 +181,9 @@ def run_dimoq(env, args, params, seed):
                   seed=seed,
                   project_name=params['project_name'],
                   experiment_name=params['experiment_name'],
-                  log=args.log)
-    dimoq.train(num_episodes=args.num_episodes, log_every=args.log_every, warmup_time=args.warmup)
-    dds = dimoq.get_local_dds()
+                  log=args.log,
+                  num_threads=args.num_threads)
+    dds = dimoq.train(num_episodes=args.num_episodes, log_every=args.log_every, warmup_time=args.warmup)
     return dimoq, dds
 
 
