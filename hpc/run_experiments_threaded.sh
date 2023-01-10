@@ -4,7 +4,7 @@
 #SBATCH --time=24:00:00
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=64gb
+#SBATCH --mem=32gb
 #SBATCH --mail-user=willem.ropke@vub.be
 #SBATCH --mail-type=ALL
 #SBATCH --output=logs/output-%A.out
@@ -26,4 +26,13 @@ pip install --user pulp
 LOGDIR="${VSC_SCRATCH}/results"
 
 # Run the experiments.
-python3 $VSC_HOME/distributional-dominance/experiments.py --log-dir "$LOGDIR" --save --log-every 5000 --num-threads -1
+# Run the experiments.
+python3 $VSC_HOME/distributional-dominance/experiments.py \
+--log-dir "$LOGDIR" \
+--seed 1 2 3 4 5 \
+--env small medium large \
+--warmup 50000 \
+--num-episodes 2000 \
+--save \
+--log-every 5000 \
+--num-threads -1
