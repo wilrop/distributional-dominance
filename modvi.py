@@ -84,6 +84,15 @@ class MODVI:
             res.append(mixture)
         return res
 
+    def get_config(self):
+        return {
+            "gamma": self.gamma,
+            "num_atoms": self.num_atoms,
+            "v_mins": self.v_mins,
+            "v_maxs": self.v_maxs,
+            "finite-horizon": self.finite_horizon,
+        }
+
     def get_dds_fh(self, num_iters):
         for i in range(num_iters):
             print(f"Iteration {i}")
