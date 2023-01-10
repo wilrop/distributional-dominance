@@ -1,7 +1,7 @@
 from itertools import product
 
 from dist_dom import dd_prune
-from multivariate_categorical_distribution import MultivariateCategoricalDistribution
+from multivariate_categorical_distribution import MCD
 from utils import zero_init, delta_dist, create_mixture_distribution
 
 
@@ -43,8 +43,7 @@ class MODVI:
 
                 for next_state in range(self.num_states):
                     reward = self.env._reward_function[state, action, next_state]
-                    reward_dist = delta_dist(MultivariateCategoricalDistribution, self.num_atoms, self.v_mins,
-                                             self.v_maxs, reward)
+                    reward_dist = delta_dist(MCD, self.num_atoms, self.v_mins, self.v_maxs, reward)
                     action_dists.append(reward_dist)
                 state_dists.append(action_dists)
             reward_dists.append(state_dists)
@@ -52,19 +51,17 @@ class MODVI:
         return reward_dists
 
     def _init_q_dists(self):
-        return [[[zero_init(MultivariateCategoricalDistribution, self.num_atoms, self.v_mins, self.v_maxs)] for _ in
-                 range(self.num_actions)] for _ in range(self.num_states)]
+        return [[[zero_init(MCD, self.num_atoms, self.v_mins, self.v_maxs)] for _ in range(self.num_actions)] for _ in
+                range(self.num_states)]
 
     def _init_return_dists(self):
         if self.finite_horizon:
             return_dists = []
             for _ in range(self.env.max_timesteps + 1):
                 return_dists.append(
-                    [[zero_init(MultivariateCategoricalDistribution, self.num_atoms, self.v_mins, self.v_maxs)] for _ in
-                     range(self.num_states)])
+                    [[zero_init(MCD, self.num_atoms, self.v_mins, self.v_maxs)] for _ in range(self.num_states)])
         else:
-            return_dists = [[zero_init(MultivariateCategoricalDistribution, self.num_atoms, self.v_mins, self.v_maxs)]
-                            for _ in range(self.num_states)]
+            return_dists = [[zero_init(MCD, self.num_atoms, self.v_mins, self.v_maxs)] for _ in range(self.num_states)]
         return return_dists
 
     def _cross_sum(self, list_of_dists, probs):
@@ -79,8 +76,7 @@ class MODVI:
         """
         res = []
         for dists in product(*list_of_dists):
-            mixture = create_mixture_distribution(dists, probs, MultivariateCategoricalDistribution, self.num_atoms,
-                                                  self.v_mins, self.v_maxs)
+            mixture = create_mixture_distribution(dists, probs, MCD, self.num_atoms, self.v_mins, self.v_maxs)
             res.append(mixture)
         return res
 

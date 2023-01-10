@@ -1,9 +1,9 @@
 import numpy as np
 
-from multivariate_categorical_distribution import MultivariateCategoricalDistribution
+from multivariate_categorical_distribution import MCD
 
 
-class CountBasedMCD(MultivariateCategoricalDistribution):
+class CountBasedMCD(MCD):
     def __init__(self, num_atoms, v_mins, v_maxs, name=None):
         super().__init__(num_atoms, v_mins, v_maxs, name=name)
         self.counts = np.zeros(self.num_atoms)

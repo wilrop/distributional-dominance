@@ -2,18 +2,18 @@ import numpy as np
 
 from convex_dist_dom import cdd_prune
 from dist_dom import dd_prune
-from multivariate_categorical_distribution import MultivariateCategoricalDistribution
+from multivariate_categorical_distribution import MCD
 from stochastic_dominance import stochastic_dominance, strict_stochastic_dominance
 
 n_atoms = np.array([10, 10])
 v_maxs = np.array([9, 9])
 v_mins = np.array([0, 0])
 
-dista = MultivariateCategoricalDistribution(n_atoms, v_mins, v_maxs, name='a')
-distb = MultivariateCategoricalDistribution(n_atoms, v_mins, v_maxs, name='b')
-distc = MultivariateCategoricalDistribution(n_atoms, v_mins, v_maxs, name='c')
-distd = MultivariateCategoricalDistribution(n_atoms, v_mins, v_maxs, name='d')
-diste = MultivariateCategoricalDistribution(n_atoms, v_mins, v_maxs, name='e')
+dista = MCD(n_atoms, v_mins, v_maxs, name='a')
+distb = MCD(n_atoms, v_mins, v_maxs, name='b')
+distc = MCD(n_atoms, v_mins, v_maxs, name='c')
+distd = MCD(n_atoms, v_mins, v_maxs, name='d')
+diste = MCD(n_atoms, v_mins, v_maxs, name='e')
 
 z_a = [np.array([1, 4]), np.array([4, 1])]
 probs_a = [1 / 2, 1 / 2]

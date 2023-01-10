@@ -1,5 +1,5 @@
-from itertools import product
 from concurrent.futures import ThreadPoolExecutor
+from itertools import product
 
 import numpy as np
 from gym.spaces import Box
@@ -7,7 +7,7 @@ from gym.spaces import Box
 from count_based_mcd import CountBasedMCD
 from dist_dom import dd_prune
 from dist_metrics import dist_hypervolume, get_best, max_inter_distance, linear_utility
-from multivariate_categorical_distribution import MultivariateCategoricalDistribution
+from multivariate_categorical_distribution import MCD
 from utils import create_mixture_distribution, zero_init
 
 
@@ -63,7 +63,7 @@ class DIMOQ:
             self.num_states = self.env.observation_space.n
             self.env_shape = (self.num_states,)
         self.num_objectives = self.env.reward_space.shape[0]
-        self.non_dominated = self._init_zero_dists(MultivariateCategoricalDistribution, squeeze=False)
+        self.non_dominated = self._init_zero_dists(MCD, squeeze=False)
         self.reward_dists = self._init_zero_dists(CountBasedMCD, squeeze=True)
         self.transitions = np.zeros((self.num_states, self.num_actions, self.num_states))
 
@@ -183,13 +183,12 @@ class DIMOQ:
                 mixture_dists.append(next_state_set)
 
         if not mixture_dists:
-            return [zero_init(MultivariateCategoricalDistribution, self.num_atoms, self.v_mins, self.v_maxs)]
+            return [zero_init(MCD, self.num_atoms, self.v_mins, self.v_maxs)]
 
         q_dists = []
 
         for dists in product(*mixture_dists):
-            mixture = create_mixture_distribution(dists, probs, MultivariateCategoricalDistribution, self.num_atoms,
-                                                  self.v_mins, self.v_maxs)
+            mixture = create_mixture_distribution(dists, probs, MCD, self.num_atoms, self.v_mins, self.v_maxs)
             q_dists.append(mixture)
 
         return q_dists
