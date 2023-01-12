@@ -137,7 +137,9 @@ def save_alg(alg, dds_size, duration, dir_path, file_name):
         json.dump(config, f)
 
 
-def save_results(results, dir_path):
+def save_pruning_results(results, durations, dir_path):
     os.makedirs(dir_path, exist_ok=True)
     df = pd.DataFrame.from_dict(results)
-    df.to_csv(os.path.join(dir_path, 'results.csv'), index=False)
+    df.to_csv(os.path.join(dir_path, 'pruning_results.csv'), index=False)
+    with open(os.path.join(dir_path, 'pruning_durations.json'), 'w') as f:
+        json.dump(durations, f)

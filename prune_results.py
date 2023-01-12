@@ -1,5 +1,6 @@
 import argparse
 import os
+import time
 from copy import deepcopy
 
 import numpy as np
@@ -8,7 +9,7 @@ from classic_dominance import p_prune, c_prune
 from convex_dist_dom import cdd_prune
 from dist_dom import dd_prune
 from multivariate_categorical_distribution import MCD
-from utils import load_dists, save_results
+from utils import load_dists, save_pruning_results
 
 
 def parse_args():
@@ -28,6 +29,7 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
 
+    print(f'Starting pruning at {time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())}')
     for env_name in args.env:
         for seed in args.seed:
             for alg in args.alg:
@@ -39,10 +41,12 @@ if __name__ == "__main__":
 
                 evs = [dist.get_expected_value() for dist in dists]  # Get expected values for reference.
                 results = {f'ev_{i}': [ev[i] for ev in evs] for i in range(len(evs[0]))}  # Save expected values.
+                durations = {}
 
                 for prune in args.prune:
                     dists_copy = deepcopy(dists)
 
+                    start = time.time()
                     if prune == 'dds':
                         pruned = dd_prune(dists_copy)
                     elif prune == 'cdds':
@@ -54,9 +58,13 @@ if __name__ == "__main__":
                     else:
                         raise ValueError(f"Invalid pruning method: {prune}")
 
+                    end = time.time()
+                    durations[prune] = end - start
                     prune_results = np.zeros(len(dists))
                     in_set = [d.name for d in pruned]
                     prune_results[in_set] = 1
                     results[prune] = prune_results
 
-                save_results(results, dists_dir)
+                save_pruning_results(results, durations, dists_dir)
+
+    print(f'Finished pruning at {time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())}')
