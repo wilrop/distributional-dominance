@@ -12,7 +12,7 @@ import scipy
 class MCD:
     """A class to represent a multivariate categorical distribution."""
 
-    def __init__(self, num_atoms, v_mins, v_maxs, decimals=3, name=None):
+    def __init__(self, num_atoms, v_mins, v_maxs, vecs=None, probs=None, decimals=3, name=None):
         # Check if the num atoms is a number and if so wrap it in a list and numpy array.
         if isinstance(num_atoms, (int, float, np.number)):
             num_atoms = np.array([num_atoms])
@@ -39,10 +39,30 @@ class MCD:
 
         self.gaps = (v_maxs - v_mins) / (num_atoms - 1)
         self.thetas = self._init_thetas()
-        self.dist = np.full(num_atoms, 1 / np.prod(num_atoms))  # Uniform distribution.
-        self.cdf = self.get_cdf()
-        self.coordinates = np.array(np.meshgrid(*[np.arange(atoms) for atoms in self.num_atoms])).T.reshape(-1,
-                                                                                                            self.num_dims)
+        self.coordinates = np.array(list(product(*[range(atoms) for atoms in self.num_atoms])))
+
+        self.dist = None
+        self.expected_value = None
+        self.cdf = None
+        self.marginals = None
+        self._init_dist(vecs, probs)
+
+    def _init_dist(self, vecs, probs):
+        """Initialize the distribution.
+
+        Args:
+            vecs (list): The vectors of the distribution.
+            probs (list): The probabilities of the vectors of the distribution.
+        """
+        if vecs is None or probs is None:
+            self.static_update([np.zeros(self.num_dims)], [1])
+        else:
+            self.static_update(vecs, probs)
+
+    def _update_internals(self):
+        self.expected_value = self.calc_expected_value()
+        self.cdf = self.calc_cdf()
+        self.marginals = self.calc_marginals()
 
     @staticmethod
     def _get_min_theta_idx(val, thetas):
@@ -144,16 +164,24 @@ class MCD:
         self.dist /= np.sum(self.dist)  # Normalize the distribution.
         if self.decimals is not None:
             self.dist = np.around(self.dist, decimals=self.decimals)  # Round the distribution
-        self.cdf = self.get_cdf()
 
-    def get_cdf(self):
+        # Update bookkeeping.
+        self._update_internals()
+
+    def calc_marginals(self):
+        if self.num_dims > 1:
+            return [self.calc_marginal(i) for i in range(self.num_dims)]
+        else:
+            return [None]
+
+    def calc_cdf(self):
         """Compute the cumulative distribution function of the distribution."""
         cdf = self.dist
         for i in range(self.num_dims):
             cdf = np.cumsum(cdf, axis=i)
         return cdf
 
-    def expected_value(self):
+    def calc_expected_value(self):
         """Compute the expected value of the distribution."""
         expectation = np.zeros(self.num_dims)
         for idx in np.ndindex(*self.num_atoms):
@@ -180,7 +208,7 @@ class MCD:
         """Get the nonzero vectors of the distribution with their probabilities."""
         return [(self._idx_to_vec(idx), self.dist[tuple(idx)]) for idx in np.argwhere(self.dist > 0)]
 
-    def marginal(self, dim):
+    def calc_marginal(self, dim):
         """Get the marginal distribution of a given dimension.
 
         Args:
@@ -194,9 +222,11 @@ class MCD:
         for idx in np.ndindex(*self.num_atoms):
             marginal_idx = idx[dim]
             probs[marginal_idx] += self.dist[idx]
-        marginal_dist = MCD(self.num_atoms[dim], self.v_mins[dim], self.v_maxs[dim])
-        marginal_dist.static_update(vecs, probs)
+        marginal_dist = MCD(self.num_atoms[dim], self.v_mins[dim], self.v_maxs[dim], vecs=vecs, probs=probs)
         return marginal_dist
+
+    def marginal(self, dim):
+        return self.marginals[dim]
 
     def js_distance(self, other):
         """Get the Jensen-Shannon distance between two distributions."""
@@ -258,56 +288,6 @@ class MCD:
         else:
             raise ValueError('Invalid projection method.')
 
-    def __add__(self, other):
-        """Add two distributions together.
-
-        Args:
-            other (Distribution): The other distribution to add to this one.
-
-        Returns:
-            Distribution: The sum of the two distributions.
-        """
-        vec_probs = defaultdict(lambda: 0)
-
-        for vec1, prob1 in self.nonzero_vecs_probs():
-            for vec2, prob2 in other.nonzero_vecs_probs():
-                vec = self._clip_vec(vec1 + vec2)
-                vec_probs[tuple(vec)] += prob1 * prob2
-
-        new_dist = MCD(self.num_atoms, self.v_mins, self.v_maxs)
-        new_dist.static_update(list(vec_probs.keys()), list(vec_probs.values()))
-        return new_dist
-
-    def __mul__(self, scalar):
-        """Multiply the distribution by a scalar.
-
-        Args:
-            scalar (float): The scalar to multiply the distribution by.
-
-        Returns:
-            Distribution: The distribution multiplied by the scalar.
-        """
-        vecs = []
-        probs = []
-        for vec, prob in self.nonzero_vecs_probs():
-            vecs.append(self._clip_vec(np.array(vec) * scalar))
-            probs.append(prob)
-
-        new_dist = MCD(self.num_atoms, self.v_mins, self.v_maxs)
-        new_dist.static_update(vecs, probs)
-        return new_dist
-
-    def __rmul__(self, scalar):
-        """Multiply the distribution by a scalar.
-
-        Args:
-            scalar (float): The scalar to multiply the distribution by.
-
-        Returns:
-            Distribution: The distribution multiplied by the scalar.
-        """
-        return self.__mul__(scalar)
-
     def get_config(self):
         return {
             'num_atoms': self.num_atoms.tolist(),
@@ -348,3 +328,53 @@ class MCD:
         with open(path, 'r') as f:
             dist_data = json.load(f)
         self.static_update(dist_data['dist']['vecs'], dist_data['dist']['probs'])
+
+    def __add__(self, other):
+        """Add two distributions together.
+
+        Args:
+            other (Distribution): The other distribution to add to this one.
+
+        Returns:
+            Distribution: The sum of the two distributions.
+        """
+        vec_probs = defaultdict(lambda: 0)
+
+        for vec1, prob1 in self.nonzero_vecs_probs():
+            for vec2, prob2 in other.nonzero_vecs_probs():
+                vec = self._clip_vec(vec1 + vec2)
+                vec_probs[tuple(vec)] += prob1 * prob2
+
+        vecs = list(vec_probs.keys())
+        probs = list(vec_probs.values())
+        new_dist = MCD(self.num_atoms, self.v_mins, self.v_maxs, vecs=vecs, probs=probs)
+        return new_dist
+
+    def __mul__(self, scalar):
+        """Multiply the distribution by a scalar.
+
+        Args:
+            scalar (float): The scalar to multiply the distribution by.
+
+        Returns:
+            Distribution: The distribution multiplied by the scalar.
+        """
+        vecs = []
+        probs = []
+        for vec, prob in self.nonzero_vecs_probs():
+            vecs.append(self._clip_vec(np.array(vec) * scalar))
+            probs.append(prob)
+
+        new_dist = MCD(self.num_atoms, self.v_mins, self.v_maxs, vecs=vecs, probs=probs)
+        return new_dist
+
+    def __rmul__(self, scalar):
+        """Multiply the distribution by a scalar.
+
+        Args:
+            scalar (float): The scalar to multiply the distribution by.
+
+        Returns:
+            Distribution: The distribution multiplied by the scalar.
+        """
+        return self.__mul__(scalar)
