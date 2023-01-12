@@ -3,6 +3,7 @@ import os
 from collections import defaultdict
 
 import numpy as np
+import pandas as pd
 
 
 def zero_init(dist_class, num_atoms, v_mins, v_maxs):
@@ -36,6 +37,35 @@ def delta_dist(dist_class, num_atoms, v_mins, v_maxs, value):
     dist = dist_class(num_atoms, v_mins, v_maxs)
     dist.static_update([value], [1])
     return dist
+
+
+def remove_dists(dists_to_remove, all_dists):
+    """Remove a list of distributions from another list of distributions.
+
+    Args:
+        dists_to_remove (List[MultivariateCategoricalDistribution]): A list of distributions to remove.
+        all_dists (List[MultivariateCategoricalDistribution]): The list of all distributions.
+
+    Returns:
+        List[MultivariateCategoricalDistribution]: A list of distributions.
+    """
+    if not isinstance(dists_to_remove, list):  # Make sure the distributions to remove is a list.
+        dists_to_remove = [dists_to_remove]
+
+    dists = []
+
+    for dist in all_dists:
+        keep_dist = True
+
+        for dist_rem in dists_to_remove:
+            if np.all(dist.dist == dist_rem.dist):
+                keep_dist = False
+                break
+
+        if keep_dist:
+            dists.append(dist)
+
+    return dists
 
 
 def create_mixture_distribution(dists, probs, dist_class, num_atoms, v_mins, v_maxs):
@@ -89,8 +119,9 @@ def load_dists(dir_path, dist_class):
     dists = []
 
     for file_name in os.listdir(dir_path):
-        with open(os.path.join(dir_path, file_name), 'r') as f:
-            dist_data = json.load(f)
+        if file_name.startswith('dist_'):
+            with open(os.path.join(dir_path, file_name), 'r') as f:
+                dist_data = json.load(f)
 
         num_atoms = np.array(dist_data['num_atoms'])
         v_mins = np.array(dist_data['v_mins'])
@@ -98,12 +129,9 @@ def load_dists(dir_path, dist_class):
         name = dist_data['name']
         dist = dist_class(num_atoms, v_mins, v_maxs, name=name)
 
-        vecs = []
-        probs = []
-        for vec, prob in dist_data['dist'].items():
-            vecs.append(vec)
-            probs.append(prob)
-        dist = dist.static_update(vecs, probs)
+        vecs = dist_data['dist']['vecs']
+        probs = dist_data['dist']['probs']
+        dist.static_update(vecs, probs)
         dists.append(dist)
 
     return dists
@@ -126,3 +154,9 @@ def save_alg(alg, dds_size, duration, dir_path, file_name):
 
     with open(os.path.join(dir_path, file_name), 'w') as f:
         json.dump(config, f)
+
+
+def save_results(results, dir_path):
+    os.makedirs(dir_path, exist_ok=True)
+    df = pd.DataFrame.from_dict(results)
+    df.to_csv(os.path.join(dir_path, 'results.csv'))
