@@ -51,8 +51,8 @@ class MCD:
         """Initialize the distribution.
 
         Args:
-            vecs (list): The vectors of the distribution.
-            probs (list): The probabilities of the vectors of the distribution.
+            vecs (array_like): The vectors of the distribution.
+            probs (array_like): The probabilities of the vectors of the distribution.
         """
         if vecs is None or probs is None:
             self.static_update([np.zeros(self.num_dims)], [1])
@@ -85,11 +85,7 @@ class MCD:
         return [min(v_max, max(v_min, item)) for v_min, v_max, item in zip(self.v_mins, self.v_maxs, vec)]
 
     def _init_thetas(self):
-        """Initialize the thetas for each dimension of the distribution.
-
-        Returns:
-            list: A list of thetas for each dimension of the distribution.
-        """
+        """Initialize the thetas for each dimension of the distribution."""
         thetas = []
         for num_atom, min_val, max_val in zip(self.num_atoms, self.v_mins, self.v_maxs):
             dim_thetas = np.linspace(min_val, max_val, num_atom)
@@ -139,12 +135,14 @@ class MCD:
         return self.marginals[dim]
 
     def get_expected_value(self):
+        """Get the expected value of the distribution."""
         if self.expected_value is None:
             self.set_expected_value()
 
         return self.expected_value
 
     def get_cdf(self):
+        """Get the cumulative distribution function of the distribution."""
         if self.cdf is None:
             self.set_cdf()
 
@@ -171,7 +169,7 @@ class MCD:
         """Do a static update of the distribution.
 
         Args:
-            vecs (list): A list of the vectors to update the distribution with.
+            vecs (array_like): A list of the vectors to update the distribution with.
             probs (array_like): A list of the probabilities of the vectors.
         """
         self.dist = np.zeros(self.num_atoms)
@@ -203,13 +201,13 @@ class MCD:
         self.expected_value = expected_value
 
     def set_marginal(self, dim):
-        """Get the marginal distribution of a given dimension.
+        """Compute the marginal distribution of a given dimension.
 
         Args:
             dim (int): The dimension to get the marginal distribution of.
 
         Returns:
-            Distribution: The marginal distribution of the given dimension.
+            MCD: The marginal distribution of the given dimension.
         """
         vecs = self.thetas[dim][:-1].reshape(-1, 1)
         probs = np.zeros(len(vecs))
@@ -301,6 +299,7 @@ class MCD:
             raise ValueError('Invalid projection method.')
 
     def get_config(self):
+        """Get the configuration of the distribution."""
         return {
             'num_atoms': self.num_atoms.tolist(),
             'v_mins': self.v_mins.tolist(),
@@ -345,10 +344,10 @@ class MCD:
         """Add two distributions together.
 
         Args:
-            other (Distribution): The other distribution to add to this one.
+            other (Dist): The other distribution to add to this one.
 
         Returns:
-            Distribution: The sum of the two distributions.
+            Dist: The sum of the two distributions.
         """
         vec_probs = defaultdict(lambda: 0)
 
@@ -369,7 +368,7 @@ class MCD:
             scalar (float): The scalar to multiply the distribution by.
 
         Returns:
-            Distribution: The distribution multiplied by the scalar.
+            Dist: The distribution multiplied by the scalar.
         """
         vecs = []
         probs = []
@@ -387,6 +386,6 @@ class MCD:
             scalar (float): The scalar to multiply the distribution by.
 
         Returns:
-            Distribution: The distribution multiplied by the scalar.
+            Dist: The distribution multiplied by the scalar.
         """
         return self.__mul__(scalar)
