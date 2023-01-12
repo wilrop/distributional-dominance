@@ -40,6 +40,7 @@ class MCD:
         self.gaps = (v_maxs - v_mins) / (num_atoms - 1)
         self.thetas = self._init_thetas()
         self.coordinates = np.array(list(product(*[range(atoms) for atoms in self.num_atoms])))
+        self.hist_shape = tuple(self.num_atoms) + (self.num_dims,)
 
         self.dist = None
         self.expected_value = None
@@ -194,11 +195,9 @@ class MCD:
 
     def set_expected_value(self):
         """Compute the expected value of the distribution."""
-        expected_value = np.zeros(self.num_dims)
-        for idx in np.ndindex(*self.num_atoms):
-            expected_value += self.dist[idx] * self._idx_to_vec(idx)
-
-        self.expected_value = expected_value
+        summed = self.coordinates.reshape(self.hist_shape) * self.gaps
+        scaled = summed * np.expand_dims(self.dist, axis=-1)
+        self.expected_value = scaled.sum(axis=tuple(range(self.num_dims)))
 
     def set_marginal(self, dim):
         """Compute the marginal distribution of a given dimension.
