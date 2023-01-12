@@ -4,8 +4,8 @@ from multivariate_categorical_distribution import MCD
 
 
 class CountBasedMCD(MCD):
-    def __init__(self, num_atoms, v_mins, v_maxs, name=None):
-        super().__init__(num_atoms, v_mins, v_maxs, name=name)
+    def __init__(self, num_atoms, v_mins, v_maxs, vecs=None, probs=None, decimals=3, name=None):
+        super().__init__(num_atoms, v_mins, v_maxs, vecs=vecs, probs=probs, decimals=decimals, name=name)
         self.counts = np.zeros(self.num_atoms)
 
     def update(self, vec):
