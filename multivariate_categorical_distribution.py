@@ -44,7 +44,7 @@ class MCD:
         self.dist = None
         self.expected_value = None
         self.cdf = None
-        self.marginals = None
+        self.marginals = [None] * self.num_dims
         self._init_dist(vecs, probs)
 
     def _init_dist(self, vecs, probs):
@@ -58,11 +58,6 @@ class MCD:
             self.static_update([np.zeros(self.num_dims)], [1])
         else:
             self.static_update(vecs, probs)
-
-    def _update_internals(self):
-        self.expected_value = self.calc_expected_value()
-        self.cdf = self.calc_cdf()
-        self.marginals = self.calc_marginals()
 
     @staticmethod
     def _get_min_theta_idx(val, thetas):
@@ -129,6 +124,32 @@ class MCD:
         """
         return np.array([dim_thetas[i] for i, dim_thetas in zip(idx, self.thetas)])
 
+    def get_marginal(self, dim):
+        """Get the marginal distribution of a specific dimension.
+
+        Args:
+            dim (int): The dimension to get the marginal of.
+
+        Returns:
+            MCD: The marginal distribution of the dimension.
+        """
+        if self.marginals[dim] is None:
+            self.set_marginal(dim)
+
+        return self.marginals[dim]
+
+    def get_expected_value(self):
+        if self.expected_value is None:
+            self.set_expected_value()
+
+        return self.expected_value
+
+    def get_cdf(self):
+        if self.cdf is None:
+            self.set_cdf()
+
+        return self.cdf
+
     def get_vecs(self):
         """Get the vectors of the distribution."""
         return [np.array(vec) for vec in product(*[dim_thetas[:-1] for dim_thetas in self.thetas])]
@@ -165,28 +186,39 @@ class MCD:
         if self.decimals is not None:
             self.dist = np.around(self.dist, decimals=self.decimals)  # Round the distribution
 
-        # Update bookkeeping.
-        self._update_internals()
-
-    def calc_marginals(self):
-        if self.num_dims > 1:
-            return [self.calc_marginal(i) for i in range(self.num_dims)]
-        else:
-            return [None]
-
-    def calc_cdf(self):
+    def set_cdf(self):
         """Compute the cumulative distribution function of the distribution."""
         cdf = self.dist
         for i in range(self.num_dims):
             cdf = np.cumsum(cdf, axis=i)
-        return cdf
 
-    def calc_expected_value(self):
+        self.cdf = cdf
+
+    def set_expected_value(self):
         """Compute the expected value of the distribution."""
-        expectation = np.zeros(self.num_dims)
+        expected_value = np.zeros(self.num_dims)
         for idx in np.ndindex(*self.num_atoms):
-            expectation += self.dist[idx] * self._idx_to_vec(idx)
-        return expectation
+            expected_value += self.dist[idx] * self._idx_to_vec(idx)
+
+        self.expected_value = expected_value
+
+    def set_marginal(self, dim):
+        """Get the marginal distribution of a given dimension.
+
+        Args:
+            dim (int): The dimension to get the marginal distribution of.
+
+        Returns:
+            Distribution: The marginal distribution of the given dimension.
+        """
+        vecs = self.thetas[dim][:-1].reshape(-1, 1)
+        probs = np.zeros(len(vecs))
+        for idx in np.ndindex(*self.num_atoms):
+            marginal_idx = idx[dim]
+            probs[marginal_idx] += self.dist[idx]
+        marginal_dist = MCD(self.num_atoms[dim], self.v_mins[dim], self.v_maxs[dim], vecs=vecs, probs=probs)
+
+        self.marginals[dim] = marginal_dist
 
     def p(self, vec):
         """Get the probability of a given vector in the distribution.
@@ -207,26 +239,6 @@ class MCD:
     def nonzero_vecs_probs(self):
         """Get the nonzero vectors of the distribution with their probabilities."""
         return [(self._idx_to_vec(idx), self.dist[tuple(idx)]) for idx in np.argwhere(self.dist > 0)]
-
-    def calc_marginal(self, dim):
-        """Get the marginal distribution of a given dimension.
-
-        Args:
-            dim (int): The dimension to get the marginal distribution of.
-
-        Returns:
-            Distribution: The marginal distribution of the given dimension.
-        """
-        vecs = self.thetas[dim][:-1].reshape(-1, 1)
-        probs = np.zeros(len(vecs))
-        for idx in np.ndindex(*self.num_atoms):
-            marginal_idx = idx[dim]
-            probs[marginal_idx] += self.dist[idx]
-        marginal_dist = MCD(self.num_atoms[dim], self.v_mins[dim], self.v_maxs[dim], vecs=vecs, probs=probs)
-        return marginal_dist
-
-    def marginal(self, dim):
-        return self.marginals[dim]
 
     def js_distance(self, other):
         """Get the Jensen-Shannon distance between two distributions."""
