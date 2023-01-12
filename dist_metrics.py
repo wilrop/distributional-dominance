@@ -52,7 +52,7 @@ def compute_distance_matrix(distributions, distance_metric='wasserstein'):
     """
     distance_matrix = np.zeros((len(distributions), len(distributions)))
     for i, dist1 in enumerate(distributions):
-        for j, dist2 in zip(range(i + 1, len(distributions)), distributions[i + 1:]):
+        for j, dist2 in enumerate(distributions[i + 1:], i + 1):
             if distance_metric == 'wasserstein':
                 distance = dist1.wasserstein_distance(dist2)
             elif distance_metric == 'jensen-shannon':
