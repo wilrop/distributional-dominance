@@ -1,9 +1,8 @@
 #!/bin/bash
 
-#SBATCH --job-name=dist-dom
+#SBATCH --job-name=large-momdp
 #SBATCH --time=24:00:00
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=4
 #SBATCH --mem=32gb
 #SBATCH --mail-user=willem.ropke@vub.be
 #SBATCH --mail-type=ALL
@@ -26,13 +25,12 @@ pip install --user pulp
 LOGDIR="${VSC_SCRATCH}/results"
 
 # Run the experiments.
-# Run the experiments.
 python3 $VSC_HOME/distributional-dominance/experiments.py \
 --log-dir "$LOGDIR" \
 --seed 1 2 3 4 5 \
---env small medium large \
+--env large \
 --warmup 50000 \
 --num-episodes 2000 \
 --save \
 --log-every 5000 \
---num-threads -1
+--num-threads 1

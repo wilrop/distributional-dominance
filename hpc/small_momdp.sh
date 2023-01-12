@@ -1,9 +1,9 @@
 #!/bin/bash
 
-#SBATCH --job-name=dist-dom
-#SBATCH --time=24:00:00
+#SBATCH --job-name=small-momdp
+#SBATCH --time=12:00:00
 #SBATCH --ntasks=1
-#SBATCH --mem=32gb
+#SBATCH --mem=8gb
 #SBATCH --mail-user=willem.ropke@vub.be
 #SBATCH --mail-type=ALL
 #SBATCH --output=logs/output-%A.out
@@ -28,7 +28,7 @@ LOGDIR="${VSC_SCRATCH}/results"
 python3 $VSC_HOME/distributional-dominance/experiments.py \
 --log-dir "$LOGDIR" \
 --seed 1 2 3 4 5 \
---env small medium large \
+--env small \
 --warmup 50000 \
 --num-episodes 2000 \
 --save \

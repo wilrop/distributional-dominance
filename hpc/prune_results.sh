@@ -28,5 +28,5 @@ LOGDIR="${VSC_SCRATCH}/results"
 python3 $VSC_HOME/distributional-dominance/prune_results.py \
 --log-dir "$LOGDIR" \
 --seed 1 2 3 4 5 \
---env small medium \
+--env small medium large\
 --prune dds cdds pf ch
