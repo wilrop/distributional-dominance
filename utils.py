@@ -34,8 +34,7 @@ def delta_dist(dist_class, num_atoms, v_mins, v_maxs, value):
     Returns:
         Dist: A distribution.
     """
-    dist = dist_class(num_atoms, v_mins, v_maxs)
-    dist.static_update([value], [1])
+    dist = dist_class(num_atoms, v_mins, v_maxs, vecs=[value], probs=[1])
     return dist
 
 
@@ -90,8 +89,7 @@ def create_mixture_distribution(dists, probs, dist_class, num_atoms, v_mins, v_m
 
     vecs = np.array(list(vecs_probs.keys()))
     probs = np.array(list(vecs_probs.values()))
-    new_dist = zero_init(dist_class, num_atoms, v_mins, v_maxs)
-    new_dist.static_update(vecs, probs)
+    new_dist = dist_class(num_atoms, v_mins, v_maxs, vecs=vecs, probs=probs)
     return new_dist
 
 
@@ -127,11 +125,9 @@ def load_dists(dir_path, dist_class):
         v_mins = np.array(dist_data['v_mins'])
         v_maxs = np.array(dist_data['v_maxs'])
         name = dist_data['name']
-        dist = dist_class(num_atoms, v_mins, v_maxs, name=name)
-
         vecs = dist_data['dist']['vecs']
         probs = dist_data['dist']['probs']
-        dist.static_update(vecs, probs)
+        dist = dist_class(num_atoms, v_mins, v_maxs, name=name, vecs=vecs, probs=probs)
         dists.append(dist)
 
     return dists

@@ -29,7 +29,7 @@ def c_prune(candidates):
         if weight is None:  # If there is none, discard the distribution.
             p_candidates = remove_dists(dist, p_candidates)
         else:  # Otherwise add the best distribution to the CCS.
-            new_dist = max(p_candidates, key=lambda x: np.dot(x.expected_value(), weight))
+            new_dist = max(p_candidates, key=lambda x: np.dot(x.expected_value, weight))
             p_candidates = remove_dists(new_dist, p_candidates)
             ccs.append(new_dist)
 
@@ -47,8 +47,8 @@ def pareto_dominates(a, b):
     Returns:
         bool: Whether vector a dominates vector b.
     """
-    ev_a = a.expected_value()
-    ev_b = b.expected_value()
+    ev_a = a.expected_value
+    ev_b = b.expected_value
     return np.all(ev_a >= ev_b) and np.any(ev_a > ev_b)
 
 
@@ -96,8 +96,8 @@ def find_weight(dist, candidates):
     Returns:
         ndarray | None: A weight array if it found one, otherwise None.
     """
-    vector = dist.expected_value()
-    candidates = [dist.expected_value() for dist in candidates]
+    vector = dist.expected_value
+    candidates = [dist.expected_value for dist in candidates]
     num_objectives = len(candidates[0])
 
     problem = LpProblem('findWeight', LpMaximize)

@@ -13,7 +13,7 @@ def dist_hypervolume(ref_point, dists):
     Returns:
         float: The hypervolume.
     """
-    points = [dist.expected_value() for dist in dists]
+    points = [dist.expected_value for dist in dists]
     return HV(ref_point=ref_point * -1)(np.array(points) * -1)
 
 
@@ -38,7 +38,7 @@ def linear_utility(dist_lst):
     Returns:
         float: The linear utility.
     """
-    return sum(sum(dist.expected_value()) for dist in dist_lst)
+    return sum(sum(dist.expected_value) for dist in dist_lst)
 
 
 def compute_distance_matrix(distributions, distance_metric='wasserstein'):

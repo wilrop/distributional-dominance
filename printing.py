@@ -30,7 +30,7 @@ def print_dists(dists, subsets=('DDS', 'CDUS', 'PF', 'CH'), print_all=False, pri
                 if print_name:
                     print(dist.name)
                 if print_evs:
-                    print(f'Expected value: {dist.expected_value()}')
+                    print(f'Expected value: {dist.expected_value}')
                 if print_all:
                     print(f'Non zero vectors and their probabilities: ')
                     print(dist.nonzero_vecs_probs())
