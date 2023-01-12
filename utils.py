@@ -159,4 +159,4 @@ def save_alg(alg, dds_size, duration, dir_path, file_name):
 def save_results(results, dir_path):
     os.makedirs(dir_path, exist_ok=True)
     df = pd.DataFrame.from_dict(results)
-    df.to_csv(os.path.join(dir_path, 'results.csv'))
+    df.to_csv(os.path.join(dir_path, 'results.csv'), index=False)
