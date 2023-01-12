@@ -22,7 +22,7 @@ def parse_args():
                         help="The environments to run experiments on.")
     parser.add_argument("--augment-env", action='store_true', default=True, help="Whether to augment the environment.")
     parser.add_argument("--alg", type=str, default='DIMOQ', help="The algorithm to use.")
-    parser.add_argument("--num-episodes", type=int, default=2000, help="The number of episodes to run.")
+    parser.add_argument("--num-episodes", type=int, default=400, help="The number of episodes to run.")
     parser.add_argument('--gamma', type=float, default=1., help='The discount factor.')
     parser.add_argument('--num-threads', type=int, default=1, help='The number of threads to use.')
     parser.add_argument('--log', action='store_true', default=True, help='Whether to log the results.')

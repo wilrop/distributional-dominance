@@ -18,5 +18,3 @@ class CountBasedMCD(MCD):
         for projected_vec, prob in projected_vecs:
             self.counts[self._vec_to_idx(projected_vec)] += prob
         self.dist = self.counts / np.sum(self.counts)
-
-        self._update_internals()

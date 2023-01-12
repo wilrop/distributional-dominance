@@ -14,7 +14,7 @@ def distributionally_dominates(dist1, dist2):
     """
     if stochastic_dominance(dist1, dist2):
         for dim in range(dist1.num_dims):
-            if strict_stochastic_dominance(dist1.marginal(dim), dist2.marginal(dim)):
+            if strict_stochastic_dominance(dist1.get_marginal(dim), dist2.get_marginal(dim)):
                 return True
 
     return False

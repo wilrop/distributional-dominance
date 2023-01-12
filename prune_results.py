@@ -37,7 +37,7 @@ if __name__ == "__main__":
                 for i, dist in enumerate(dists):  # Set name for reference.
                     dist.name = i
 
-                evs = [dist.expected_value for dist in dists]  # Get expected values for reference.
+                evs = [dist.get_expected_value() for dist in dists]  # Get expected values for reference.
                 results = {f'ev_{i}': [ev[i] for ev in evs] for i in range(len(evs[0]))}  # Save expected values.
 
                 for prune in args.prune:

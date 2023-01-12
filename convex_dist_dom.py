@@ -33,8 +33,8 @@ def cdd_joint_lp(dist_check, mixture_lst):
     # Define the joint distribution constraints.
     for idx, point in enumerate(check_points):
         s_var = LpVariable(f's{idx}', lowBound=0)
-        values = [dist.cdf[point] for dist in mixture_lst]
-        problem += lpDot(weight_variables, values) + s_var == dist_check.cdf[point]
+        values = [dist.get_cdf()[point] for dist in mixture_lst]
+        problem += lpDot(weight_variables, values) + s_var == dist_check.get_cdf()[point]
         problem += s_var >= 0
 
     # Define the marginal constraints.
@@ -42,8 +42,8 @@ def cdd_joint_lp(dist_check, mixture_lst):
     for dim in range(dist_check.num_dims):
         for idx, point in enumerate(check_points):
             l_var = LpVariable(f'l{dim}{idx}', lowBound=0)
-            values = [dist.marginal(dim).cdf[point[dim]] for dist in mixture_lst]
-            problem += lpDot(weight_variables, values) + l_var == dist_check.marginal(dim).cdf[point[dim]]
+            values = [dist.get_marginal(dim).get_cdf()[point[dim]] for dist in mixture_lst]
+            problem += lpDot(weight_variables, values) + l_var == dist_check.get_marginal(dim).get_cdf()[point[dim]]
             l_variables.append(l_var)
 
     problem += lpSum(l_variables)  # Maximise the sum of l variables.
@@ -88,10 +88,11 @@ def cdd_marginal_lp(dist_check, mixture_lst):
 
         values = []
         for dist in mixture_lst:
-            value = np.prod([dist.marginal(dim).cdf[point[dim]] for dim in range(dist_check.num_dims)])
+            value = np.prod([dist.get_marginal(dim).get_cdf()[point[dim]] for dim in range(dist_check.num_dims)])
             values.append(value)
 
-        dist_check_value = np.prod([dist_check.marginal(dim).cdf[point[dim]] for dim in range(dist_check.num_dims)])
+        dist_check_value = np.prod(
+            [dist_check.get_marginal(dim).get_cdf()[point[dim]] for dim in range(dist_check.num_dims)])
         problem += lpDot(weight_variables, values) + s_var == dist_check_value
         s_variables.append(s_var)
 
