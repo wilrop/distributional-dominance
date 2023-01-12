@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=large-momdp
+#SBATCH --job-name=large-5
 #SBATCH --time=24:00:00
 #SBATCH --ntasks=1
 #SBATCH --mem=32gb
@@ -27,7 +27,7 @@ LOGDIR="${VSC_SCRATCH}/results"
 # Run the experiments.
 python3 $VSC_HOME/distributional-dominance/experiments.py \
 --log-dir "$LOGDIR" \
---seed 1 2 3 4 5 \
+--seed 5 \
 --env large \
 --warmup 50000 \
 --num-episodes 2000 \
