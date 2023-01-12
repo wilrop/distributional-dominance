@@ -119,16 +119,16 @@ def create_medium_momdp(args, seed):
 
 
 def create_large_momdp(args, seed):
-    num_states = 20
+    num_states = 15
     num_objectives = 2
     num_actions = 3
     min_next_states = 1
     max_next_states = 3
-    num_terminal_states = 2
+    num_terminal_states = 1
     reward_min = np.zeros(num_objectives, dtype=np.float32)
     reward_max = np.ones(num_objectives) * 5
     start_state = 0
-    max_timesteps = 10
+    max_timesteps = 7
     env = RandomMOMDP(num_states, num_objectives, num_actions, min_next_states, max_next_states, num_terminal_states,
                       reward_min, reward_max, reward_dist='discrete', start_state=start_state,
                       max_timesteps=max_timesteps, seed=seed, augment_state=args.augment_env)
