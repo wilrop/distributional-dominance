@@ -1,16 +1,12 @@
 import argparse
 import os
 import time
-from copy import deepcopy
 
 import mo_gym
 import numpy as np
 from mo_gym.deep_sea_treasure.deep_sea_treasure import CONCAVE_MAP
-from ramo.pareto.verify import p_prune
 
-from convex_dist_dom import cdd_prune
 from dimoq import DIMOQ
-from dist_dom import dd_prune
 from modvi import MODVI
 from random_momdp import RandomMOMDP
 from space_traders import SpaceTraders
@@ -35,34 +31,6 @@ def parse_args():
     parser.add_argument('--warmup', type=int, default=50000, help='The number of warmup episodes.')
     args = parser.parse_args()
     return args
-
-
-def print_dds(dds, print_all=True, sanity_check=False):
-    print(f'Size of the DDS: {len(dds)}')
-    if print_all:
-        for dist in dds:
-            print(dist.expected_value())
-            print(dist.nonzero_vecs_probs())
-            print('------------------')
-
-    if sanity_check:
-        set_copy = deepcopy(dds)
-        dds = dd_prune(set_copy)
-        print(f'Size of the DDS after sanity check: {len(dds)}')
-
-    set_copy = deepcopy(dds)
-    cdds = cdd_prune(set_copy)
-    print(f'Size of the CDDS: {len(cdds)}')
-
-    if sanity_check:
-        set_copy = deepcopy(dds)
-        cdds = cdd_prune(set_copy)
-        print(f'Size of the CDDS after sanity check: {len(cdds)}')
-
-    set_copy = deepcopy(dds)
-    candidates = set([tuple(dist.expected_value()) for dist in set_copy])
-    pf = p_prune(candidates)
-    print(f'Size of the Pareto front: {len(pf)}')
 
 
 def dst_params():
