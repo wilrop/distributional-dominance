@@ -18,7 +18,7 @@ def parse_args():
     parser.add_argument('--log-dir', type=str, default='logs', help='The directory to save the logs.')
     parser.add_argument("--seed", type=int, nargs='+', default=[1, 2, 3, 4, 5],
                         help="The seed for random number generation.")
-    parser.add_argument("--env", type=str, nargs='+', default=["small", "medium", "large"],
+    parser.add_argument("--env", type=str, nargs='+', default=["space-traders"],
                         help="The environments to run experiments on.")
     parser.add_argument("--augment-env", action='store_true', default=True, help="Whether to augment the environment.")
     parser.add_argument("--alg", type=str, default='DIMOQ', help="The algorithm to use.")

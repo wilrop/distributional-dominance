@@ -1,6 +1,6 @@
 import numpy as np
 from pulp import *
-from utils import remove_dists, zero_init
+from utils import remove_dists
 from multivariate_categorical_distribution import MCD
 
 
@@ -17,7 +17,7 @@ def c_prune(candidates):
         List[Dist]: A convex coverage set.
 
     """
-    zero_dist = zero_init(MCD, candidates[0].num_atoms, candidates[0].v_mins, candidates[0].v_maxs)
+    zero_dist = MCD(candidates[0].num_atoms, candidates[0].v_mins, candidates[0].v_maxs)
     p_candidates = p_prune(candidates)
     ccs = [zero_dist]
 

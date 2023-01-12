@@ -8,7 +8,7 @@ from count_based_mcd import CountBasedMCD
 from dist_dom import dd_prune
 from dist_metrics import dist_hypervolume, get_best, max_inter_distance, linear_utility
 from multivariate_categorical_distribution import MCD
-from utils import create_mixture_distribution, zero_init
+from utils import create_mixture_distribution
 
 
 class DIMOQ:
@@ -81,9 +81,9 @@ class DIMOQ:
                 state_action_dists = []
                 for _ in range(self.num_states):
                     if squeeze:
-                        dist = zero_init(dist_class, self.num_atoms, self.v_mins, self.v_maxs)
+                        dist = dist_class(self.num_atoms, self.v_mins, self.v_maxs)
                     else:
-                        dist = [zero_init(dist_class, self.num_atoms, self.v_mins, self.v_maxs)]
+                        dist = [dist_class(self.num_atoms, self.v_mins, self.v_maxs)]
                     state_action_dists.append(dist)
                 state_dists.append(state_action_dists)
             zero_dists.append(state_dists)
@@ -183,7 +183,7 @@ class DIMOQ:
                 mixture_dists.append(next_state_set)
 
         if not mixture_dists:
-            return [zero_init(MCD, self.num_atoms, self.v_mins, self.v_maxs)]
+            return [MCD(self.num_atoms, self.v_mins, self.v_maxs)]
 
         q_dists = []
 
