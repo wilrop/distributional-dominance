@@ -1,12 +1,14 @@
 import argparse
 import os
 from copy import deepcopy
+
 import numpy as np
-from utils import load_dists, save_results
-from multivariate_categorical_distribution import MCD
-from dist_dom import dd_prune
-from convex_dist_dom import cdd_prune
+
 from classic_dominance import p_prune, c_prune
+from convex_dist_dom import cdd_prune
+from dist_dom import dd_prune
+from multivariate_categorical_distribution import MCD
+from utils import load_dists, save_results
 
 
 def parse_args():
@@ -35,7 +37,8 @@ if __name__ == "__main__":
                 for i, dist in enumerate(dists):  # Set name for reference.
                     dist.name = i
 
-                results = {}
+                evs = [dist.expected_value() for dist in dists]  # Get expected values for reference.
+                results = {f'ev_{i}': [ev[i] for ev in evs] for i in range(len(evs[0]))}  # Save expected values.
 
                 for prune in args.prune:
                     dists_copy = deepcopy(dists)
