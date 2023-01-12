@@ -1,6 +1,5 @@
-import numpy as np
-
 from stochastic_dominance import stochastic_dominance, strict_stochastic_dominance
+from utils import remove_dists
 
 
 def distributionally_dominates(dist1, dist2):
@@ -21,35 +20,6 @@ def distributionally_dominates(dist1, dist2):
     return False
 
 
-def remove_dists(dists_to_remove, all_dists):
-    """Remove a list of distributions from another list of distributions.
-
-    Args:
-        dists_to_remove (List[MultivariateCategoricalDistribution]): A list of distributions to remove.
-        all_dists (List[MultivariateCategoricalDistribution]): The list of all distributions.
-
-    Returns:
-        List[MultivariateCategoricalDistribution]: A list of distributions.
-    """
-    if not isinstance(dists_to_remove, list):  # Make sure the distributions to remove is a list.
-        dists_to_remove = [dists_to_remove]
-
-    dists = []
-
-    for dist in all_dists:
-        keep_dist = True
-
-        for dist_rem in dists_to_remove:
-            if np.all(dist.dist == dist_rem.dist):
-                keep_dist = False
-                break
-
-        if keep_dist:
-            dists.append(dist)
-
-    return dists
-
-
 def dd_prune(candidates):
     """Prune the distributions which are dominated from a list of candidates.
 
@@ -63,17 +33,17 @@ def dd_prune(candidates):
     dd_set = []
 
     while candidates:
-        dist = candidates.pop()
-        dists_to_remove = [dist]
+        dist = candidates[0]
+        idx_to_remove = [0]
 
-        for alternative in candidates:
+        for alt_idx, alternative in enumerate(candidates[1:], 1):
             if distributionally_dominates(alternative, dist):
                 dist = alternative
-                dists_to_remove.append(alternative)
+                idx_to_remove.append(alt_idx)
             elif distributionally_dominates(dist, alternative):
-                dists_to_remove.append(alternative)
+                idx_to_remove.append(alt_idx)
 
-        candidates = remove_dists(dists_to_remove, candidates)
+        candidates = [dist for idx, dist in enumerate(candidates) if idx not in idx_to_remove]
         dd_set.append(dist)
 
     return dd_set
