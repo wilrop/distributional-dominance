@@ -33,17 +33,17 @@ def dd_prune(candidates):
     dd_set = []
 
     while candidates:
-        dist = candidates[0]
-        idx_to_remove = [0]
+        dist = candidates.pop()
+        dists_to_remove = [dist]
 
-        for alt_idx, alternative in enumerate(candidates[1:], 1):
+        for alternative in candidates:
             if distributionally_dominates(alternative, dist):
                 dist = alternative
-                idx_to_remove.append(alt_idx)
+                dists_to_remove.append(alternative)
             elif distributionally_dominates(dist, alternative):
-                idx_to_remove.append(alt_idx)
+                dists_to_remove.append(alternative)
 
-        candidates = [dist for idx, dist in enumerate(candidates) if idx not in idx_to_remove]
+        candidates = remove_dists(dists_to_remove, candidates)
         dd_set.append(dist)
 
     return dd_set
