@@ -241,7 +241,7 @@ class MCD:
         """Get the Jensen-Shannon distance between two distributions."""
         return scipy.spatial.distance.jensenshannon(self.dist.flatten(), other.dist.flatten())
 
-    def wasserstein_distance(self, other, lambd=0, smoothing=1e-3):
+    def wasserstein_distance(self, other, lambd=0, smoothing=1e-5):
         """Get the Wasserstein distance between two distributions."""
         M = ot.dist(self.coordinates)
         distribution1 = self.dist.flatten()
@@ -252,6 +252,8 @@ class MCD:
                 distribution /= np.sum(distribution)
             dist = ot.sinkhorn2(distribution1, distribution2, M, lambd)
         else:
+            distribution1 /= np.sum(distribution1)
+            distribution2 /= np.sum(distribution2)
             dist = ot.emd2(distribution1, distribution2, M)
         return dist
 
