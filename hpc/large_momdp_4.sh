@@ -22,7 +22,7 @@ pip install --user POT
 pip install --user pulp
 
 # Define the log directory.
-LOGDIR="${VSC_SCRATCH}/results"
+LOGDIR="${VSC_SCRATCH}/results-large"
 
 # Run the experiments.
 python3 $VSC_HOME/distributional-dominance/experiments.py \
