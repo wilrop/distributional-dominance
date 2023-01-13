@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=prune-res
+#SBATCH --job-name=prune-l
 #SBATCH --time=24:00:00
 #SBATCH --ntasks=1
 #SBATCH --mem=32gb
@@ -28,5 +28,5 @@ LOGDIR="${VSC_SCRATCH}/results"
 python3 $VSC_HOME/distributional-dominance/prune_results.py \
 --log-dir "$LOGDIR" \
 --seed 1 2 3 4 5 \
---env small medium large\
+--env large\
 --prune dds cdds pf ch
