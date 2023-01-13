@@ -243,7 +243,11 @@ class MCD:
 
     def wasserstein_distance(self, other, lambd=0, smoothing=1e-5):
         """Get the Wasserstein distance between two distributions."""
-        M = ot.dist(self.coordinates)
+        return self.ot(other, metric='euclidean', lambd=lambd, smoothing=smoothing)
+
+    def ot(self, other, metric='sqeuclidean', lambd=0, smoothing=1e-5):
+        """Get the optimal transport between two distributions."""
+        M = ot.dist(self.coordinates, metric=metric)
         distribution1 = self.dist.flatten()
         distribution2 = other.dist.flatten()
         if lambd > 0:
