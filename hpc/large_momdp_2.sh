@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=large-2
+#SBATCH --job-name=large-2-new
 #SBATCH --time=24:00:00
 #SBATCH --ntasks=1
 #SBATCH --mem=32gb
