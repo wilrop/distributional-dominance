@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=prune-l
+#SBATCH --job-name=prune-l-4
 #SBATCH --time=24:00:00
 #SBATCH --ntasks=1
 #SBATCH --mem=32gb
@@ -22,11 +22,11 @@ pip install --user POT
 pip install --user pulp
 
 # Define the log directory.
-LOGDIR="${VSC_SCRATCH}/results"
+LOGDIR="${VSC_SCRATCH}/results-large"
 
 # Prune the results.
 python3 $VSC_HOME/distributional-dominance/prune_results.py \
 --log-dir "$LOGDIR" \
---seed 1 2 3 4 5 \
+--seed 4 \
 --env large\
 --prune dds cdds pf ch
