@@ -69,11 +69,13 @@ def p_prune(candidates):
 
     while candidates:
         dist = candidates.pop()
-        to_remove = [dist]
+
         for alternative in candidates:
             if pareto_dominates(alternative, dist):
                 dist = alternative
-                to_remove.append(alternative)
+
+        to_remove = [dist]
+        for alternative in candidates:
             if pareto_dominates(dist, alternative):
                 to_remove.append(alternative)
         candidates = remove_dists(to_remove, candidates)
