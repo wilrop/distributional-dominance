@@ -1,8 +1,8 @@
 from copy import deepcopy
 
-from classic_dominance import p_prune, c_prune
-from dist_dom import dd_prune
-from convex_dist_dom import cdd_prune
+from distrib.classic_dominance import p_prune, c_prune
+from distrib.dist_dom import dd_prune
+from distrib.convex_dist_dom import cdd_prune
 
 
 def print_dists(dists, subsets=('DDS', 'CDUS', 'PF', 'CH'), print_all=False, print_name=False, print_evs=False):

@@ -6,11 +6,11 @@ import mo_gym
 import numpy as np
 from mo_gym.deep_sea_treasure.deep_sea_treasure import CONCAVE_MAP
 
-from dimoq import DIMOQ
-from modvi import MODVI
-from random_momdp import RandomMOMDP
-from space_traders import SpaceTraders
-from utils import save_dists, save_momdp, save_alg
+from algs.dimoq import DIMOQ
+from algs.modvi import MODVI
+from envs.random_momdp import RandomMOMDP
+from envs.space_traders import SpaceTraders
+from utils.data import save_dists, save_momdp, save_alg
 
 
 def parse_args():

@@ -1,6 +1,6 @@
 import numpy as np
 from pulp import *
-from utils import remove_dists
+from distrib.helpers import remove_dists
 from multivariate_categorical_distribution import MCD
 
 

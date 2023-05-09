@@ -5,11 +5,11 @@ from copy import deepcopy
 
 import numpy as np
 
-from classic_dominance import p_prune, c_prune
-from convex_dist_dom import cdd_prune
-from dist_dom import dd_prune
-from multivariate_categorical_distribution import MCD
-from utils import load_dists, save_pruning_results
+from distrib.classic_dominance import p_prune, c_prune
+from distrib.convex_dist_dom import cdd_prune
+from distrib.dist_dom import dd_prune
+from distrib.multivariate_categorical_distribution import MCD
+from utils.data import load_dists, save_pruning_results
 
 
 def parse_args():
