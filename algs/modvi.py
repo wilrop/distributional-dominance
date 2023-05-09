@@ -1,8 +1,8 @@
 from itertools import product
 
-from dist_dom import dd_prune
-from multivariate_categorical_distribution import MCD
-from utils import delta_dist, create_mixture_distribution
+from distrib.dist_dom import dd_prune
+from distrib.multivariate_categorical_distribution import MCD
+from distrib.helpers import delta_dist, create_mixture_distribution
 
 
 class MODVI:

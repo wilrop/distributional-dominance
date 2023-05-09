@@ -4,16 +4,19 @@ from itertools import product
 import numpy as np
 from gym.spaces import Box
 
-from count_based_mcd import CountBasedMCD
-from dist_dom import dd_prune
-from dist_metrics import dist_hypervolume, get_best, max_inter_distance, linear_utility
-from multivariate_categorical_distribution import MCD
-from utils import create_mixture_distribution
+from distrib.count_based_mcd import CountBasedMCD
+from distrib.dist_dom import dd_prune
+from utils.dist_metrics import dist_hypervolume, get_best, max_inter_distance, linear_utility
+from distrib.multivariate_categorical_distribution import MCD
+from distrib.helpers import create_mixture_distribution
 
 
 class DIMOQZ:
     """
-    Distributional Dominance Multi-Objective Q-learning
+    Distributional Dominance Multi-Objective Q-learning.
+
+    This algorithm is exactly the same as DIMOQ, but uses next state sets rather than state-action-next state sets.
+    This is equivalent but ensures faster learning. In fact, this is basically value iteration on a learned model.
     """
 
     def __init__(
