@@ -1,5 +1,5 @@
-from stochastic_dominance import stochastic_dominance, strict_stochastic_dominance
-from utils import remove_dists
+from distrib.stochastic_dominance import stochastic_dominance, strict_stochastic_dominance
+from distrib.helpers import remove_dists
 
 
 def distributionally_dominates(dist1, dist2):

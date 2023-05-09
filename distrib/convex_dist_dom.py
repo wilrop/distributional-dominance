@@ -1,7 +1,7 @@
 import numpy as np
 from pulp import *
 
-from dist_dom import remove_dists
+from distrib.helpers import remove_dists
 
 
 def cdd_joint_lp(dist_check, mixture_lst):

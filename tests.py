@@ -1,9 +1,9 @@
 import numpy as np
 
-from convex_dist_dom import cdd_prune
-from dist_dom import dd_prune
-from multivariate_categorical_distribution import MCD
-from stochastic_dominance import stochastic_dominance, strict_stochastic_dominance
+from distrib.convex_dist_dom import cdd_prune
+from distrib.dist_dom import dd_prune
+from distrib.multivariate_categorical_distribution import MCD
+from distrib.stochastic_dominance import stochastic_dominance, strict_stochastic_dominance
 
 n_atoms = np.array([10, 10])
 v_maxs = np.array([9, 9])
