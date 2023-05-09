@@ -23,7 +23,7 @@ pip install --user POT
 pip install --user pulp
 
 # Define the log directory.
-LOGDIR="${VSC_SCRATCH}/results-large"
+LOGDIR="${VSC_SCRATCH}/results-paper"
 
 # Prune the results.
 python3 $VSC_HOME/distributional-dominance/prune_results.py \
