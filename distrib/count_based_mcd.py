@@ -1,6 +1,6 @@
 import numpy as np
 
-from multivariate_categorical_distribution import MCD
+from distrib.multivariate_categorical_distribution import MCD
 
 
 class CountBasedMCD(MCD):

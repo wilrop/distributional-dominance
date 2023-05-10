@@ -1,7 +1,7 @@
 import numpy as np
 from pulp import *
 from distrib.helpers import remove_dists
-from multivariate_categorical_distribution import MCD
+from distrib.multivariate_categorical_distribution import MCD
 
 
 def c_prune(candidates):
