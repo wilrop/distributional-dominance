@@ -9,12 +9,12 @@ from collections import defaultdict
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--log-dir', type=str, default='logs', help='The directory to save the logs.')
+    parser.add_argument('--log-dir', type=str, default='logs', help='The directory of the saved logs.')
     parser.add_argument("--seed", type=int, nargs='+', default=[1, 2, 3, 4, 5],
-                        help="The seed for random number generation.")
-    parser.add_argument("--env", type=str, nargs='+', default=["small",],
-                        help="The environments to run experiments on.")
-    parser.add_argument("--alg", type=str, nargs='+', default=['DIMOQ'], help="The algorithm to use.")
+                        help="The seeds used in the experiment.")
+    parser.add_argument("--env", type=str, nargs='+', default=["small", "medium", "large"],
+                        help="The environments of the experiment.")
+    parser.add_argument("--alg", type=str, nargs='+', default=['DIMOQ'], help="The algorithms that were used.")
     args = parser.parse_args()
     return args
 
