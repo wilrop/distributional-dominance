@@ -261,6 +261,17 @@ class MCD:
             dist = ot.emd2(distribution1, distribution2, M)
         return dist
 
+    def expected_utility(self, u_func):
+        """Compute the expected utility of the distribution.
+
+        Args:
+            u_func (function): The utility function to use.
+
+        Returns:
+            float: The expected utility of the distribution.
+        """
+        return np.sum(u_func(self.coordinates) * self.dist.flatten())
+
     def spawn(self):
         """Spawn a new distribution with the same parameters."""
         return MCD(self.num_atoms, self.v_mins, self.v_maxs)
