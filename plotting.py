@@ -51,8 +51,8 @@ def make_overlapping_scatterplot(df):
     ch = sorted(ch)
     sns.lineplot(x=[x[0] for x in ch], y=[x[1] for x in ch], label='CH', color='grey', linewidth=1)
     plt.grid(alpha=0.25)
-    plt.xlabel('Objective 1')
-    plt.ylabel('Objective 2')
+    plt.xlabel('Expected value of objective 1')
+    plt.ylabel('Expected value of objective 2')
     plt.savefig('visualisation.pdf')
 
 

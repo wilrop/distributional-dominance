@@ -77,8 +77,8 @@ def make_overlapping_scatterplot(df,
         plt.annotate(f'{u_all:.1f}', coords_all - offset_all, fontsize=10)
 
     plt.grid(alpha=0.25)
-    plt.xlabel('Objective 1')
-    plt.ylabel('Objective 2')
+    plt.xlabel('Expected value of objective 1')
+    plt.ylabel('Expected value of objective 2')
     plt.savefig(f'case_study_{num}.pdf')
     plt.clf()
 
